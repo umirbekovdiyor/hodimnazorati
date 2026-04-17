@@ -3,8 +3,8 @@
 // ============================================================
 
 // !!! O'ZINGIZNING SUPABASE MA'LUMOTLARINGIZNI QO'YING
-const SUPABASE_URL = 'https://YOUR_PROJECT_ID.supabase.co';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL = 'https://nbxpdssdeeamypvecyba.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_xPke9lNej4mAiyLUtxvEIA_DAhmEg_j';
 
 // Supabase client
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
