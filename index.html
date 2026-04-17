@@ -1,0 +1,2991 @@
+<!DOCTYPE html>
+<html lang="uz" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AloqaPro</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="images/logo2.png">
+<meta name="theme-color" content="#4a7ab5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<script src="./supabase.js"></script>
+<script>window.wasmPath = './';</script>
+<script async src="./face-api.js"></script>
+<script async src="./xlsx.full.min.js"></script>
+<script src="./jspdf.umd.min.js"></script>
+<script src="./jspdf.plugin.autotable.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+:root {
+  --accent: #4a8cf5;
+  --accent2: #06d6a0;
+  --danger: #ff4757;
+  --warn: #ffa502;
+  --success: #2ed573;
+  --purple: #a55eea;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 4px 24px rgba(0,0,0,.18);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,.28);
+  --font: 'Outfit', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  --transition: all .22s cubic-bezier(.4,0,.2,1);
+}
+
+[data-theme="dark"] {
+  --bg: #0f1923;
+  --bg2: #16212e;
+  --bg3: #1d2d3e;
+  --sidebar-bg: #0a1520;
+  --border: rgba(255,255,255,.08);
+  --border2: rgba(255,255,255,.14);
+  --text: #e8edf2;
+  --text2: #8fa3b8;
+  --text3: #5a7a96;
+  --card: #1a2535;
+  --card2: #1f2f42;
+  --header: #0d1b2a;
+  --input-bg: #0f1923;
+  --hover: rgba(255,255,255,.04);
+  --skeleton: linear-gradient(90deg, #1d2d3e 25%, #243444 50%, #1d2d3e 75%);
+  --toast-bg: #1f2f42;
+  --sidebar-text: #c8d8e8;
+  --sidebar-active: rgba(74,140,245,.25);
+  --sidebar-hover: rgba(255,255,255,.06);
+}
+
+[data-theme="light"] {
+  --bg: #f0f4f8;
+  --bg2: #e8eef5;
+  --bg3: #dde6f0;
+  --sidebar-bg: #1a2a3a;
+  --border: rgba(0,0,0,.08);
+  --border2: rgba(0,0,0,.14);
+  --text: #1a2535;
+  --text2: #4a6080;
+  --text3: #7a9ab8;
+  --card: #ffffff;
+  --card2: #f8fafc;
+  --header: #162030;
+  --input-bg: #fff;
+  --hover: rgba(0,0,0,.03);
+  --skeleton: linear-gradient(90deg, #e0e8f0 25%, #edf3f9 50%, #e0e8f0 75%);
+  --toast-bg: #ffffff;
+  --sidebar-text: #c8d8e8;
+  --sidebar-active: rgba(74,140,245,.3);
+  --sidebar-hover: rgba(255,255,255,.08);
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html, body { font-family:var(--font); background:var(--bg); color:var(--text); min-height:100vh; -webkit-text-size-adjust:100%; transition:background .3s, color .3s; }
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:10px; }
+
+.theme-toggle { position:relative; width:44px; height:24px; flex-shrink:0; }
+.theme-toggle input { opacity:0; width:0; height:0; }
+.theme-slider { position:absolute; inset:0; background:var(--bg3); border-radius:20px; cursor:pointer; transition:var(--transition); border:1px solid var(--border2); }
+.theme-slider::before { content:''; position:absolute; width:18px; height:18px; left:2px; top:2px; background:var(--text2); border-radius:50%; transition:var(--transition); }
+.theme-toggle input:checked + .theme-slider { background:var(--accent); }
+.theme-toggle input:checked + .theme-slider::before { transform:translateX(20px); background:#fff; }
+
+.flag { display:inline-flex; width:32px; height:21px; border-radius:3px; overflow:hidden; flex-shrink:0; }
+.flag svg { width:100%; height:100%; display:block; }
+.lsw { display:flex; align-items:center; gap:4px; background:rgba(255,255,255,.1); border-radius:20px; padding:3px 6px; }
+.lb { cursor:pointer; border:none; background:none; padding:2px; border-radius:4px; opacity:.5; transition:var(--transition); }
+.lb.active { opacity:1; box-shadow:0 0 0 2px var(--accent); border-radius:4px; }
+.lsep { width:1px; height:20px; background:var(--border2); }
+
+.skeleton { background:var(--skeleton); background-size:200% 100%; animation:shimmer 1.5s infinite; border-radius:var(--radius-sm); }
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+.sk-line { height:14px; margin-bottom:8px; }
+.sk-line.short { width:60%; }
+.sk-line.long { width:90%; }
+
+#toast-container { position:fixed; top:16px; right:16px; z-index:99999; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+.toast { background:var(--toast-bg); border:1px solid var(--border2); border-radius:var(--radius); padding:12px 16px; min-width:260px; max-width:340px; box-shadow:var(--shadow-lg); pointer-events:all; display:flex; align-items:flex-start; gap:10px; animation:slideIn .3s ease; font-size:13px; }
+.toast.removing { animation:slideOut .3s ease forwards; }
+.toast-icon { font-size:18px; flex-shrink:0; line-height:1; }
+.toast-body { flex:1; }
+.toast-title { font-weight:700; font-size:13px; margin-bottom:2px; }
+.toast-msg { color:var(--text2); font-size:12px; }
+.toast.success { border-left:3px solid var(--success); }
+.toast.error { border-left:3px solid var(--danger); }
+.toast.warn { border-left:3px solid var(--warn); }
+.toast.info { border-left:3px solid var(--accent); }
+@keyframes slideIn { from{transform:translateX(120%);opacity:0} to{transform:translateX(0);opacity:1} }
+@keyframes slideOut { from{transform:translateX(0);opacity:1} to{transform:translateX(120%);opacity:0} }
+
+#loginPage { display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); padding:16px; position:relative; overflow:hidden; }
+#loginPage::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse 80% 60% at 50% -10%, rgba(74,140,245,.15), transparent); pointer-events:none; }
+.lp-lang { position:fixed; top:14px; right:14px; z-index:999; display:flex; align-items:center; gap:8px; }
+.logo-blk { display:flex; flex-direction:column; align-items:center; margin-bottom:24px; position:relative; z-index:1; }
+.logo-img-main { width:180px; height:116px; object-fit:contain; filter:drop-shadow(0 8px 24px rgba(74,140,245,.3)); animation:logoFloat 3s ease-in-out infinite; }
+@keyframes logoFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+.login-card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:28px; width:100%; max-width:420px; box-shadow:var(--shadow-lg); position:relative; z-index:1; animation:cardIn .5s ease; }
+@keyframes cardIn { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+.login-card h2 { text-align:center; font-size:17px; font-weight:700; margin-bottom:5px; }
+.login-card p { text-align:center; color:var(--text2); font-size:12.5px; margin-bottom:20px; }
+.iw { position:relative; margin-bottom:12px; }
+.iw input { width:100%; padding:13px 42px 13px 14px; background:var(--input-bg); color:var(--text); border:1.5px solid var(--border2); border-radius:var(--radius); font-size:14px; font-family:var(--font); outline:none; transition:var(--transition); }
+.iw input::placeholder { color:var(--text3); }
+.iw input:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(74,140,245,.15); }
+.eye { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; color:var(--text3); padding:4px; }
+.lbtn { width:100%; padding:13px; background:linear-gradient(135deg, var(--accent), #3a6ee0); color:#fff; border:none; border-radius:var(--radius); font-size:15px; font-weight:700; cursor:pointer; margin-top:4px; transition:var(--transition); font-family:var(--font); letter-spacing:.3px; }
+.lbtn:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(74,140,245,.4); }
+.lbtn:active { transform:translateY(0); }
+.lerr { color:var(--danger); font-size:12px; text-align:center; margin-top:8px; min-height:16px; font-weight:500; }
+
+#ipBlockPage { display:none; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; background:var(--bg); }
+.ip-card { background:var(--card); border-radius:16px; padding:36px 28px; max-width:440px; width:100%; text-align:center; box-shadow:var(--shadow-lg); margin:16px; border:1px solid var(--border); }
+.ip-icon { font-size:48px; margin-bottom:14px; }
+.ip-card h2 { font-size:19px; font-weight:800; margin-bottom:10px; }
+.ip-card p { font-size:13px; color:var(--text2); line-height:1.7; }
+.ip-val { display:inline-block; background:var(--bg3); border-radius:8px; padding:6px 14px; font-size:13px; color:var(--text2); font-family:var(--mono); margin-top:8px; }
+
+#adminPage, #employeePage { display:none; }
+.layout { display:flex; min-height:100vh; }
+
+.sidebar { width:210px; background:var(--sidebar-bg); display:flex; flex-direction:column; flex-shrink:0; transition:transform .25s ease; border-right:1px solid rgba(255,255,255,.06); }
+.sb-head { display:flex; align-items:center; gap:10px; padding:18px 16px 20px; min-height:94px; border-bottom:1px solid rgba(255,255,255,.08); background:rgba(74,140,245,.08); }
+.sb-logo-img { width:32px; height:32px; object-fit:contain; }
+.sb-logo-txt { color:#fff; font-size:16px; font-weight:800; letter-spacing:-.3px; }
+.sb-logo-txt span { color:#4a8cf5; }
+.sb-nav { display:flex; flex-direction:column; gap:3px; padding:12px 8px; flex:1; }
+
+.nbtn { padding:11px 14px; background:transparent; color:var(--sidebar-text); border:none; border-radius:var(--radius-sm); font-size:13px; font-weight:500; cursor:pointer; text-align:left; transition:var(--transition); font-family:var(--font); display:flex; align-items:center; gap:10px; position:relative; opacity:.75; }
+.nbtn:hover { background:var(--sidebar-hover); color:#fff; opacity:1; }
+.nbtn.active { background:var(--sidebar-active); color:#4a8cf5; font-weight:700; opacity:1; border-left:3px solid #4a8cf5; padding-left:11px; }
+.nbtn .ni { font-size:16px; }
+.sb-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:199; }
+.sb-overlay.open { display:block; }
+.hamburger { display:none; flex-direction:column; gap:5px; background:none; border:none; cursor:pointer; padding:5px; flex-shrink:0; }
+.hamburger span { display:block; width:22px; height:2px; background:#fff; border-radius:2px; transition:var(--transition); }
+
+.mcol { flex:1; display:flex; flex-direction:column; min-width:0; }
+
+.tophdr { background:var(--header); padding:13px 18px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; gap:8px; border-bottom:1px solid rgba(255,255,255,.06); box-shadow:0 2px 12px rgba(0,0,0,.2); }
+.tophdr h1 { color:#fff; font-size:16px; font-weight:700; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hdr-r { display:flex; align-items:center; gap:8px; flex-shrink:0; flex-wrap:wrap; }
+.hdr-date { color:rgba(255,255,255,.6); font-size:11px; white-space:nowrap; font-family:var(--mono); background:rgba(255,255,255,.07); padding:4px 8px; border-radius:6px; }
+.xbtn { padding:7px 14px; background:rgba(255,255,255,.1); color:#fff; border:1px solid rgba(255,255,255,.15); border-radius:var(--radius-sm); font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; transition:var(--transition); font-family:var(--font); }
+.xbtn:hover { background:rgba(255,255,255,.2); }
+.pbody { flex:1; padding:16px; overflow-y:auto; }
+
+.scards { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+.scard { background:var(--card); border-radius:var(--radius); padding:14px 16px; box-shadow:var(--shadow); border:1px solid var(--border); position:relative; overflow:hidden; animation:fadeUp .4s ease both; }
+.scard::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background:var(--accent-card, var(--accent)); }
+.scard:nth-child(1) { --accent-card: var(--accent); }
+.scard:nth-child(2) { --accent-card: var(--warn); }
+.scard:nth-child(3) { --accent-card: var(--danger); }
+.scard:nth-child(4) { --accent-card: var(--accent2); }
+.scard h4 { font-size:11px; color:var(--text2); margin-bottom:8px; font-weight:500; text-transform:uppercase; letter-spacing:.5px; }
+.snum { font-size:26px; font-weight:800; font-family:var(--mono); }
+@keyframes fadeUp { from{transform:translateY(12px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+.box { background:var(--card); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); margin-bottom:16px; border:1px solid var(--border); animation:fadeUp .4s ease both; }
+.btitle { font-size:14px; font-weight:700; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+
+.tbl-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+.tbl { width:100%; border-collapse:collapse; font-size:12.5px; }
+.tbl th { background:var(--bg3); padding:9px 10px; text-align:left; color:var(--text2); font-weight:600; border-bottom:2px solid var(--border2); white-space:nowrap; font-size:11px; text-transform:uppercase; letter-spacing:.4px; }
+.tbl td { padding:9px 10px; border-bottom:1px solid var(--border); vertical-align:middle; font-size:12.5px; }
+.tbl tr:hover td { background:var(--hover); }
+.badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; display:inline-block; white-space:nowrap; font-family:var(--mono); }
+.bg { background:rgba(46,213,115,.15); color:var(--success); }
+.by { background:rgba(255,165,2,.15); color:var(--warn); }
+.br { background:rgba(255,71,87,.15); color:var(--danger); }
+.bgr { background:var(--bg3); color:var(--text3); }
+.bafk { background:rgba(165,94,234,.15); color:var(--purple); }
+.bauto { background:rgba(6,214,160,.15); color:var(--accent2); }
+
+.frow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.frow input, .frow select, .sf input, .sf select { padding:8px 10px; border:1.5px solid var(--border2); border-radius:var(--radius-sm); font-size:12.5px; background:var(--input-bg); color:var(--text); outline:none; transition:var(--transition); font-family:var(--font); }
+.frow input:focus, .frow select:focus, .sf input:focus, .sf select:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(74,140,245,.12); }
+.bb { padding:8px 14px; background:var(--accent); color:#fff; border:none; border-radius:var(--radius-sm); font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; transition:var(--transition); font-family:var(--font); }
+.bb:hover { background:#3a7de8; transform:translateY(-1px); }
+.bg2 { padding:8px 14px; background:var(--bg3); color:var(--text); border:1px solid var(--border2); border-radius:var(--radius-sm); font-size:12.5px; font-weight:600; cursor:pointer; white-space:nowrap; transition:var(--transition); font-family:var(--font); }
+.bg2:hover { background:var(--bg2); }
+.brd { padding:5px 10px; background:rgba(255,71,87,.15); color:var(--danger); border:1px solid rgba(255,71,87,.25); border-radius:var(--radius-sm); font-size:11.5px; cursor:pointer; font-weight:600; transition:var(--transition); font-family:var(--font); }
+.brd:hover { background:rgba(255,71,87,.25); }
+.bsm { padding:4px 8px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer; border:none; font-family:var(--mono); transition:var(--transition); }
+.bsm-g { background:rgba(46,213,115,.15); color:var(--success); }
+.bsm-r { background:rgba(255,71,87,.15); color:var(--danger); }
+.bsm-gr { background:var(--bg3); color:var(--text2); }
+.btn-export { padding:8px 14px; background:rgba(6,214,160,.15); color:var(--accent2); border:1px solid rgba(6,214,160,.3); border-radius:var(--radius-sm); font-size:12px; font-weight:600; cursor:pointer; transition:var(--transition); font-family:var(--font); display:flex; align-items:center; gap:5px; }
+.btn-export:hover { background:rgba(6,214,160,.25); }
+
+.drange { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.drange label { font-size:11px; color:var(--text3); }
+.drange input { padding:6px 8px; border:1.5px solid var(--border2); border-radius:var(--radius-sm); font-size:12px; background:var(--input-bg); color:var(--text); }
+
+.mst { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:14px; }
+.ms { background:var(--bg3); border-radius:var(--radius-sm); padding:12px; border:1px solid var(--border); }
+.ms h5 { font-size:10.5px; color:var(--text2); margin-bottom:5px; text-transform:uppercase; letter-spacing:.4px; }
+.ms .v { font-size:16px; font-weight:800; font-family:var(--mono); }
+
+.sf { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+
+.kbox { background:var(--bg3); border-radius:var(--radius); padding:18px; font-size:13px; line-height:2.1; border:1px solid var(--border); }
+.krow { display:flex; gap:10px; }
+.kcol { min-width:140px; color:var(--text2); }
+
+#faceWidget { position:fixed; bottom:16px; right:16px; z-index:500; background:var(--card); border-radius:14px; padding:10px; box-shadow:var(--shadow-lg); width:180px; border:1px solid var(--border); }
+#faceWidget .fw-title { color:var(--text); font-size:11px; font-weight:700; margin-bottom:6px; display:flex; align-items:center; justify-content:space-between; }
+#faceWidget video { width:100%; border-radius:8px; display:block; }
+#faceWidget canvas { position:absolute; top:10px; left:10px; border-radius:8px; pointer-events:none; }
+.fw-status { display:flex; align-items:center; gap:6px; margin-top:6px; }
+.fw-dot { width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+.fw-dot.green { background:var(--success); box-shadow:0 0 6px var(--success); }
+.fw-dot.red { background:var(--danger); box-shadow:0 0 6px var(--danger); animation:pulse 1s infinite; }
+.fw-dot.yellow { background:var(--warn); box-shadow:0 0 6px var(--warn); }
+.fw-dot.gray { background:var(--text3); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+.fw-txt { color:var(--text2); font-size:10.5px; }
+.fw-timer { color:var(--danger); font-size:11px; font-weight:700; margin-top:4px; font-family:var(--mono); }
+.fw-afk { color:var(--text2); font-size:10.5px; margin-top:3px; }
+.fw-video-wrap { position:relative; }
+.fw-minimize { background:none; border:none; color:var(--text3); cursor:pointer; font-size:14px; line-height:1; padding:2px; }
+.fw-reg-btn { width:100%; margin-top:6px; padding:5px; background:rgba(74,140,245,.15); color:var(--accent); border:1px solid rgba(74,140,245,.3); border-radius:6px; font-size:10px; font-weight:700; cursor:pointer; font-family:var(--font); }
+.fw-liveness { font-size:10px; color:var(--text3); margin-top:3px; text-align:center; }
+
+#afkBanner { display:none; position:fixed; top:0; left:0; right:0; z-index:1000; background:linear-gradient(135deg,var(--danger),#c0392b); color:#fff; text-align:center; padding:10px 16px; font-size:13px; font-weight:700; box-shadow:var(--shadow); animation:slideDown .3s ease; }
+#autoEndBanner { display:none; position:fixed; top:0; left:0; right:0; z-index:1001; background:linear-gradient(135deg,var(--success),#27ae60); color:#fff; text-align:center; padding:10px 16px; font-size:13px; font-weight:700; animation:slideDown .3s ease; }
+#breakBanner { display:none; position:fixed; bottom:0; left:0; right:0; z-index:1000; background:linear-gradient(135deg,var(--warn),#e67e22); color:#fff; text-align:center; padding:8px 16px; font-size:12px; font-weight:700; }
+@keyframes slideDown { from{transform:translateY(-100%)} to{transform:translateY(0)} }
+
+#installBanner { display:none; position:fixed; bottom:80px; right:16px; z-index:600; background:var(--card); border:1px solid var(--border2); border-radius:var(--radius); padding:12px 16px; box-shadow:var(--shadow-lg); max-width:280px; }
+#installBanner p { font-size:12px; color:var(--text); margin-bottom:8px; font-weight:600; }
+.install-btns { display:flex; gap:7px; }
+.btn-install { padding:7px 14px; background:var(--accent); color:#fff; border:none; border-radius:var(--radius-sm); font-size:12px; font-weight:700; cursor:pointer; font-family:var(--font); }
+.btn-install-no { padding:7px 10px; background:var(--bg3); color:var(--text2); border:none; border-radius:var(--radius-sm); font-size:12px; cursor:pointer; font-family:var(--font); }
+
+.ehdr { background:var(--header); padding:13px 18px; display:flex; align-items:center; justify-content:space-between; gap:8px; border-bottom:1px solid rgba(255,255,255,.06); box-shadow:0 2px 12px rgba(0,0,0,.2); }
+.ehdr-brand { display:flex; align-items:center; gap:10px; }
+.ehdr-brand-name { color:#fff; font-size:15px; font-weight:800; letter-spacing:-.2px; }
+.ehdr-brand-name span { color:#4a8cf5; }
+.ebody { display:grid; grid-template-columns:1fr 1fr; gap:14px; padding:16px; }
+.ec { background:var(--card); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); border:1px solid var(--border); animation:fadeUp .4s ease both; }
+.ec h2 { font-size:14px; font-weight:700; margin-bottom:12px; }
+.efw { grid-column:1/-1; }
+.tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px; }
+.tag { padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; font-family:var(--mono); }
+.tb { background:rgba(74,140,245,.15); color:var(--accent); }
+.tg { background:var(--bg3); color:var(--text2); }
+.to { background:rgba(255,165,2,.15); color:var(--warn); }
+.ta { background:rgba(255,71,87,.15); color:var(--danger); }
+.abtns { display:flex; gap:8px; margin-bottom:12px; }
+.abtn { flex:1; padding:12px 4px; border:none; border-radius:var(--radius-sm); font-size:13px; font-weight:700; cursor:pointer; transition:var(--transition); font-family:var(--font); }
+.abtn:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 6px 16px rgba(0,0,0,.2); }
+.abtn:disabled { opacity:.4; cursor:not-allowed; transform:none !important; }
+.ast { background:linear-gradient(135deg,var(--success),#27ae60); color:#fff; }
+.alu { background:linear-gradient(135deg,var(--warn),#e67e22); color:#fff; }
+.aen { background:linear-gradient(135deg,var(--danger),#c0392b); color:#fff; }
+.aco { background:linear-gradient(135deg,var(--accent),#3a6ee0); color:#fff; width:100%; display:block; padding:12px; margin-bottom:12px; border:none; border-radius:var(--radius-sm); font-size:13px; font-weight:700; cursor:pointer; font-family:var(--font); transition:var(--transition); }
+.aco:hover { transform:translateY(-1px); }
+.tgrid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:8px; }
+.tb2 h4 { font-size:10.5px; color:var(--text2); margin-bottom:4px; text-transform:uppercase; letter-spacing:.4px; }
+.tv { font-size:22px; font-weight:800; font-family:var(--mono); color:var(--text); }
+.td { font-size:10px; color:var(--text3); margin-top:3px; }
+.afk-box { background:rgba(255,71,87,.06); border:1.5px solid rgba(255,71,87,.2); border-radius:var(--radius-sm); padding:12px; margin-top:10px; }
+.afk-box h4 { font-size:11px; color:var(--danger); font-weight:700; margin-bottom:5px; }
+.afk-total { font-size:20px; font-weight:800; color:var(--danger); font-family:var(--mono); }
+.afk-count { font-size:11px; color:var(--warn); margin-top:3px; }
+.afk-break-ok { font-size:11px; color:var(--success); margin-top:3px; font-weight:600; }
+.igrid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.ii { background:var(--bg3); border-radius:var(--radius-sm); padding:10px; border:1px solid var(--border); }
+.ii h4 { font-size:10.5px; color:var(--text2); margin-bottom:4px; text-transform:uppercase; letter-spacing:.4px; }
+.ii p { font-size:13px; font-weight:700; font-family:var(--mono); }
+.mhdr { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:8px; flex-wrap:wrap; }
+.mhdr h2 { margin:0; }
+.mflt { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.mflt input { padding:6px 9px; border:1.5px solid var(--border2); border-radius:var(--radius-sm); font-size:12px; background:var(--input-bg); color:var(--text); }
+.emp-bottom-nav { display:none; }
+.note { font-size:10.5px; color:var(--text3); margin-top:8px; }
+
+.fb-item { background:var(--bg3); border-radius:var(--radius-sm); padding:12px; margin-bottom:8px; border:1px solid var(--border); animation:fadeUp .3s ease; }
+.fb-item.new-item { border-color:rgba(74,140,245,.4); }
+.fb-header { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px; }
+.fb-name { font-size:12px; font-weight:700; }
+.fb-date { font-size:11px; color:var(--text3); font-family:var(--mono); }
+.fb-msg { font-size:12.5px; color:var(--text); margin-bottom:8px; line-height:1.5; }
+.fb-type { padding:2px 8px; border-radius:20px; font-size:10px; font-weight:700; }
+.fb-type.complaint { background:rgba(255,71,87,.15); color:var(--danger); }
+.fb-type.suggestion { background:rgba(74,140,245,.15); color:var(--accent); }
+.fb-type.other { background:var(--bg3); color:var(--text2); }
+.fb-reply-area { margin-top:6px; }
+.fb-reply-area textarea { width:100%; padding:8px 10px; background:var(--input-bg); border:1.5px solid var(--border2); border-radius:var(--radius-sm); font-size:12px; color:var(--text); font-family:var(--font); resize:vertical; min-height:60px; outline:none; }
+.fb-reply-area textarea:focus { border-color:var(--accent); }
+.fb-replied { background:rgba(6,214,160,.08); border-radius:var(--radius-sm); padding:8px 10px; font-size:12px; color:var(--accent2); border-left:3px solid var(--accent2); margin-top:6px; }
+.notif-badge { background:var(--danger); color:#fff; font-size:10px; font-weight:800; font-family:var(--mono); border-radius:10px; padding:1px 5px; margin-left:4px; vertical-align:middle; }
+.notif-item { display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-bottom:1px solid var(--border); transition:var(--transition); }
+.notif-item.unread { background:rgba(74,140,245,.05); }
+.notif-item:hover { background:var(--hover); }
+.notif-dot { width:8px; height:8px; border-radius:50%; background:var(--accent); flex-shrink:0; margin-top:4px; }
+.notif-dot.read { background:var(--border2); }
+.notif-body { flex:1; }
+.notif-title { font-size:12.5px; font-weight:700; margin-bottom:2px; }
+.notif-msg { font-size:11.5px; color:var(--text2); }
+.notif-time { font-size:10px; color:var(--text3); font-family:var(--mono); margin-top:2px; }
+.push-notif-btn { width:100%; padding:9px; background:rgba(74,140,245,.15); color:var(--accent); border:1px solid rgba(74,140,245,.3); border-radius:var(--radius-sm); font-size:12px; font-weight:700; cursor:pointer; font-family:var(--font); margin-bottom:10px; transition:var(--transition); }
+.push-notif-btn:hover { background:rgba(74,140,245,.25); }
+
+.face-reg-box { background:var(--bg3); border-radius:var(--radius); padding:14px; border:1px solid var(--border); margin-bottom:10px; }
+.face-reg-box h4 { font-size:12px; font-weight:700; margin-bottom:8px; }
+.face-samples { display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap; }
+.face-sample-dot { width:32px; height:32px; border-radius:50%; background:var(--bg2); border:2px solid var(--border2); display:flex; align-items:center; justify-content:center; font-size:14px; }
+.face-sample-dot.done { background:rgba(46,213,115,.15); border-color:var(--success); }
+.face-quality { font-size:11px; color:var(--text2); margin-bottom:6px; }
+.liveness-indicator { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--text2); margin-top:6px; }
+.liveness-dot { width:8px; height:8px; border-radius:50%; background:var(--text3); }
+.liveness-dot.ok { background:var(--success); }
+.liveness-dot.checking { background:var(--warn); animation:pulse 1s infinite; }
+
+.ov { position:fixed; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px; backdrop-filter:blur(4px); animation:fadein .2s ease; }
+@keyframes fadein { from{opacity:0} to{opacity:1} }
+.modal { background:var(--card); border-radius:16px; padding:28px 24px; max-width:480px; width:100%; text-align:center; box-shadow:var(--shadow-lg); border:1px solid var(--border2); animation:modalIn .3s ease; }
+@keyframes modalIn { from{transform:scale(.9) translateY(20px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
+.modal p { font-size:13px; color:var(--text2); line-height:1.7; margin-bottom:16px; }
+.modal h3 { font-size:16px; font-weight:800; margin-bottom:12px; }
+.mbtns { display:flex; gap:10px; justify-content:center; }
+.mok { padding:11px 28px; background:linear-gradient(135deg,var(--success),#27ae60); color:#fff; border:none; border-radius:var(--radius); font-size:14px; font-weight:700; cursor:pointer; font-family:var(--font); transition:var(--transition); }
+.mok:hover { transform:translateY(-1px); }
+.mno { padding:11px 28px; background:linear-gradient(135deg,var(--danger),#c0392b); color:#fff; border:none; border-radius:var(--radius); font-size:14px; font-weight:700; cursor:pointer; font-family:var(--font); transition:var(--transition); }
+.msingle { padding:11px 44px; background:linear-gradient(135deg,var(--accent),#3a6ee0); color:#fff; border:none; border-radius:var(--radius); font-size:15px; font-weight:700; cursor:pointer; font-family:var(--font); transition:var(--transition); }
+.msingle:hover { transform:translateY(-1px); }
+.hidden { display:none !important; }
+.afk-modal-border { border:2px solid var(--danger) !important; }
+.countdown { font-size:36px; font-weight:900; color:var(--danger); margin:10px 0; font-family:var(--mono); }
+
+.break-tracker { background:rgba(255,165,2,.06); border:1.5px solid rgba(255,165,2,.2); border-radius:var(--radius-sm); padding:10px 12px; margin-top:8px; }
+.break-tracker h4 { font-size:11px; color:var(--warn); font-weight:700; margin-bottom:4px; }
+.break-bar-wrap { background:var(--bg3); border-radius:20px; height:6px; margin:6px 0; overflow:hidden; }
+.break-bar { height:100%; border-radius:20px; background:linear-gradient(90deg,var(--success),var(--warn)); transition:width .5s ease; }
+.break-bar.over { background:linear-gradient(90deg,var(--warn),var(--danger)); }
+.break-info { font-size:11px; color:var(--text2); display:flex; justify-content:space-between; }
+
+.notif-send-box { background:var(--bg3); border-radius:var(--radius-sm); padding:14px; margin-bottom:14px; border:1px solid var(--border); }
+.notif-send-box h4 { font-size:12px; font-weight:700; margin-bottom:10px; }
+.notif-send-row { display:flex; gap:8px; flex-wrap:wrap; }
+.notif-send-row input, .notif-send-row textarea, .notif-send-row select { flex:1; padding:8px 10px; background:var(--input-bg); border:1.5px solid var(--border2); border-radius:var(--radius-sm); font-size:12px; color:var(--text); font-family:var(--font); outline:none; min-width:160px; }
+.notif-send-row input:focus, .notif-send-row textarea:focus { border-color:var(--accent); }
+.sb-bottom { display:none; padding:12px 16px; border-top:1px solid rgba(255,255,255,.08); gap:10px; align-items:center; justify-content:space-between; }
+
+.monthly-dashboard{display:grid;grid-template-columns:1.1fr .9fr;gap:12px;margin-bottom:14px}
+.md-panel{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px}
+.md-title{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px}
+.md-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.md-item{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px}
+.md-item h5{font-size:10px;color:var(--text2);margin-bottom:4px;text-transform:uppercase}
+.md-item .v{font-size:22px;font-weight:800;font-family:var(--mono)}
+.monthly_table_wrap table{min-width:1180px}
+.fw-zoom{display:flex;gap:6px;margin-top:6px}
+.fw-zoom button{flex:1;padding:5px 8px;background:var(--bg3);color:var(--text);border:1px solid var(--border2);border-radius:6px;cursor:pointer;font-size:11px;font-weight:700}
+.fw-video-wrap{overflow:hidden}
+.fw-video-wrap video,.fw-video-wrap canvas{transform-origin:top left}
+@media(max-width:900px){
+  .monthly-dashboard{grid-template-columns:1fr}
+  .md-grid{grid-template-columns:repeat(2,1fr)}
+}
+
+@media(max-width:900px){.scards{grid-template-columns:repeat(2,1fr)}.mst{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:680px){
+  /* ── HODIM BOTTOM NAV ── */
+  .emp-bottom-nav{
+    display:flex;position:fixed;bottom:0;left:0;right:0;z-index:300;
+    background:var(--header);border-top:1px solid rgba(255,255,255,.1);
+    padding:6px 0 10px;gap:0;
+  }
+  .ebn-btn{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    background:none;border:none;color:rgba(255,255,255,.5);font-size:10px;
+    font-family:var(--font);cursor:pointer;padding:4px 2px;transition:var(--transition);
+  }
+  .ebn-btn span:first-child{font-size:20px;}
+  .ebn-btn.active{color:var(--accent);}
+  /* Pastki nav uchun joy qoldirish */
+  #employeePage { padding-bottom:70px; }
+
+  /* ── HODIM HEADER telefonda faqat logo + chiqish ── */
+  .ehdr{padding:10px 12px;}
+  .ehdr > div:last-child .xbtn:not(#empExit){display:none;}
+  .ehdr .lsw{display:none;}
+  .ehdr .theme-toggle{display:none;}
+
+  /* ── HODIM BODY ── */
+  .ebody{grid-template-columns:1fr;gap:10px;padding:10px 8px;}
+  .efw{grid-column:1;}
+
+  /* ── ISH TUGMALARI ── */
+  .abtns{gap:6px;}
+  .abtn{padding:14px 4px;font-size:13px;}
+
+  /* ── TAYMER ── */
+  .tgrid{grid-template-columns:1fr 1fr;gap:8px;}
+  .tv{font-size:28px;}
+
+  /* ── BUGUNGI MA'LUMOT ── */
+  .igrid{grid-template-columns:1fr 1fr;gap:8px;}
+  .ii{padding:8px;}
+  .ii h4{font-size:10px;}
+  .ii p{font-size:12px;}
+
+  /* ── ADMIN SIDEBAR ── */
+  .sidebar{position:fixed;left:0;top:0;bottom:0;z-index:200;width:230px;transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);}
+  .hamburger{display:flex;}
+  .tophdr{padding:10px 12px;}
+  .tophdr h1{font-size:13px;}
+  .hdr-date{display:none;}
+  .xbtn{padding:6px 9px;font-size:11px;}
+  .pbody{padding:10px 8px;}
+  .scards{grid-template-columns:1fr 1fr;gap:8px;}
+  .snum{font-size:22px;}
+  .mst{grid-template-columns:1fr 1fr;gap:8px;}
+  .hdr-r .lsw{display:none;}
+  .hdr-r .theme-toggle{display:none;}
+  .hdr-r{gap:6px;}
+  .sb-bottom{display:flex !important;}
+  .scard{padding:10px 12px;}
+  .scard h4{font-size:10px;}
+  .frow{flex-direction:column;align-items:stretch;}
+  .frow input,.frow select{width:100%;min-width:unset;}
+  .drange{flex-wrap:wrap;}
+  .drange input{flex:1;min-width:120px;}
+  .box{padding:12px 10px;}
+  .btitle{font-size:13px;}
+  .notif-send-row{flex-direction:column;}
+  .notif-send-row input,.notif-send-row textarea,.notif-send-row select{width:100%;min-width:unset;}
+
+  /* ── UMUMIY ── */
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .tbl th,.tbl td{padding:7px 8px;white-space:nowrap;font-size:11px;}
+  .modal{padding:22px 16px;}
+  #faceWidget{width:150px;bottom:8px;right:8px;}
+}
+
+@media(max-width:400px){
+  .tgrid{grid-template-columns:1fr 1fr;}
+  .igrid{grid-template-columns:1fr 1fr;}
+  .abtns{gap:4px;}
+  .abtn{font-size:12px;padding:12px 2px;}
+  .tv{font-size:24px;}
+  .ebody{padding:8px 6px;}
+  .scards{grid-template-columns:1fr 1fr;}
+  .pbody{padding:8px 6px;}
+  .mst{grid-template-columns:1fr 1fr;}
+}
+</style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<div id="afkBanner">⚠️ <span id="afkBannerTxt">Yuz aniqlanmadi! AFK vaqt hisoblanmoqda...</span></div>
+<div id="autoEndBanner">✅ <span id="autoEndTxt">Ish vaqti tugadi. Tizim tomonidan yakunlandi (18:00)</span></div>
+<div id="breakBanner">☕ <span id="breakBannerTxt">Tanaffus vaqtingiz: 0:00 / 30 daqiqa</span></div>
+
+<div id="installBanner">
+  <p>📱 AloqaPro ni o'rnatish</p>
+  <div class="install-btns">
+    <button class="btn-install" onclick="installPWA()">O'rnatish</button>
+    <button class="btn-install-no" onclick="dismissInstall()">Keyinroq</button>
+  </div>
+</div>
+
+<div id="ipBlockPage">
+  <div class="ip-card">
+    <div class="ip-icon">🔒</div>
+    <h2 id="ipb_t">Kirish taqiqlandi</h2>
+    <p id="ipb_p">Bu tizimga faqat ishxona tarmog'i orqali kirishingiz mumkin.</p>
+    <p id="ipb_p2" style="font-size:12px;color:var(--text3);margin-top:6px">Sizning IP manzilingiz:</p>
+    <span class="ip-val" id="ipb_val">aniqlanmoqda...</span>
+  </div>
+</div>
+
+<div id="loginPage">
+  <div class="lp-lang">
+    <label class="theme-toggle" title="Dark/Light Mode">
+      <input type="checkbox" id="themeToggle" onchange="toggleTheme()">
+      <span class="theme-slider"></span>
+    </label>
+    <div class="lsw">
+      <button class="lb active" id="ll_uz" onclick="setLang('uz')">
+        <span class="flag"><svg viewBox="0 0 34 22"><rect width="34" height="7.33" fill="#1EB3E4"/><rect y="7.33" width="34" height="7.34" fill="#fff"/><rect y="14.67" width="34" height="7.33" fill="#32A84C"/><rect y="6.9" width="34" height=".8" fill="#CE2028"/><rect y="14.3" width="34" height=".8" fill="#CE2028"/><circle cx="9" cy="3.7" r="2.3" fill="#fff"/><circle cx="10.1" cy="3.7" r="2.3" fill="#1EB3E4"/><circle cx="13" cy="1.4" r=".55" fill="#fff"/><circle cx="14.5" cy="2.4" r=".55" fill="#fff"/><circle cx="15.5" cy="3.9" r=".55" fill="#fff"/><circle cx="14.5" cy="5.3" r=".55" fill="#fff"/><circle cx="13" cy="6.3" r=".55" fill="#fff"/></svg></span>
+      </button>
+      <span class="lsep"></span>
+      <button class="lb" id="ll_ru" onclick="setLang('ru')">
+        <span class="flag"><svg viewBox="0 0 34 22"><rect width="34" height="7.33" fill="#fff"/><rect y="7.33" width="34" height="7.34" fill="#1C3F94"/><rect y="14.67" width="34" height="7.33" fill="#CE2028"/></svg></span>
+      </button>
+    </div>
+  </div>
+  <div class="logo-blk">
+    <img src="images/logo1.png" alt="AloqaPro" class="logo-img-main" onerror="this.style.display='none'">
+  </div>
+  <div class="login-card">
+    <h2 id="lc_t">Nazorat tizimiga xush kelibsiz!</h2>
+    <p id="lc_s">Login va parolni kiriting!</p>
+    <div class="iw"><input type="email" id="inp_l" placeholder="Email" autocomplete="off"></div>
+    <div class="iw">
+      <input type="password" id="inp_p" placeholder="Parol">
+      <button class="eye" onclick="toggleEye()" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10 10 0 0 1 12 20C5 20 1 12 1 12a18 18 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9 9 0 0 1 12 4c7 0 11 8 11 8a18 18 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+      </button>
+    </div>
+    <button class="lbtn" id="lbtn" onclick="doLogin()">Kirish</button>
+    <div class="lerr" id="lerr"></div>
+  </div>
+</div>
+
+<div id="adminPage">
+  <div class="sb-overlay" id="sb_overlay" onclick="closeSidebar()"></div>
+  <div class="layout">
+    <div class="sidebar" id="sidebar">
+      <div class="sb-head">
+        <img src="images/logo2.png" alt="" class="sb-logo-img" onerror="this.style.display='none'">
+        <span class="sb-logo-txt">Aloqa<span>Pro</span></span>
+      </div>
+      <div class="sb-nav">
+        <button class="nbtn active" id="nav_main" onclick="adminTab('main');closeSidebar()"><span class="ni">📊</span><span id="n_main">Asosiy</span></button>
+        <button class="nbtn" id="nav_notif" onclick="adminTab('notif');closeSidebar()"><span class="ni">🔔</span><span id="n_notif">Bildirishnomalar</span> <span id="notifBadgeAdmin" class="notif-badge hidden">0</span></button>
+        <button class="nbtn" id="nav_feedback" onclick="adminTab('feedback');closeSidebar()"><span class="ni">💬</span><span id="n_fb">Fikrlar</span> <span id="fbBadge" class="notif-badge hidden">0</span></button>
+        <button class="nbtn" id="nav_settings" onclick="adminTab('settings');closeSidebar()"><span class="ni">⚙️</span><span id="n_set">Sozlamalar</span></button>
+        <button class="nbtn" id="nav_kpi" onclick="adminTab('kpi');closeSidebar()"><span class="ni">🏆</span><span id="n_kpi">KPI Qoidalar</span></button>
+      </div>
+      <div class="sb-bottom">
+        <label class="theme-toggle" title="Mavzu"><input type="checkbox" id="themeToggle4" onchange="toggleTheme()"><span class="theme-slider"></span></label>
+        <div class="lsw">
+          <button class="lb active" id="sl_uz" onclick="setLang('uz')"><span class="flag"><svg viewBox="0 0 34 22"><rect width="34" height="7.33" fill="#1EB3E4"/><rect y="7.33" width="34" height="7.34" fill="#fff"/><rect y="14.67" width="34" height="7.33" fill="#32A84C"/><rect y="6.9" width="34" height=".8" fill="#CE2028"/><rect y="14.3" width="34" height=".8" fill="#CE2028"/><circle cx="9" cy="3.7" r="2.3" fill="#fff"/><circle cx="10.1" cy="3.7" r="2.3" fill="#1EB3E4"/></svg></span></button>
+          <span class="lsep"></span>
+          <button class="lb" id="sl_ru" onclick="setLang('ru')"><span class="flag"><svg viewBox="0 0 34 22"><rect width="34" height="7.33" fill="#fff"/><rect y="7.33" width="34" height="7.34" fill="#1C3F94"/><rect y="14.67" width="34" height="7.33" fill="#CE2028"/></svg></span></button>
+        </div>
+        <button class="xbtn" onclick="doLogout()" style="font-size:11px;padding:5px 10px">Chiqish</button>
+      </div>
+    </div>
+    <div class="mcol">
+      <div class="tophdr">
+        <button class="hamburger" id="hamburger" onclick="toggleSidebar()"><span></span><span></span><span></span></button>
+        <h1 id="admTitle">Boshqaruv paneli</h1>
+        <div class="hdr-r">
+          <span class="hdr-date" id="admDate"></span>
+          <label class="theme-toggle" title="Mavzu"><input type="checkbox" id="themeToggle2" onchange="toggleTheme()"><span class="theme-slider"></span></label>
+          <div class="lsw">
+            <button class="lb active" id="al_uz" onclick="setLang('uz')"><span class="flag"><svg viewBox="0 0 34 22"><rect width="34" height="7.33" fill="#1EB3E4"/><rect y="7.33" width="34" height="7.34" fill="#fff"/><rect y="14.67" width="34" height="7.33" fill="#32A84C"/><rect y="6.9" width="34" height=".8" fill="#CE2028"/><rect y="14.3" width="34" height=".8" fill="#CE2028"/><circle cx="9" cy="3.7" r="2.3" fill="#fff"/><circle cx="10.1" cy="3.7" r="2.3" fill="#1EB3E4"/></svg></span></button>
+            <span class="lsep"></span>
+            <button class="lb" id="al_ru" onclick="setLang('ru')"><span class="flag"><svg viewBox="0 0 34 22"><rect width="34" height="7.33" fill="#fff"/><rect y="7.33" width="34" height="7.34" fill="#1C3F94"/><rect y="14.67" width="34" height="7.33" fill="#CE2028"/></svg></span></button>
+          </div>
+          <button class="xbtn" id="admExit" onclick="doLogout()">Chiqish</button>
+        </div>
+      </div>
+      <div class="pbody">
+        <div id="tab_main">
+          <div class="scards">
+            <div class="scard"><h4 id="sc1">Bugun ishda</h4><div class="snum" id="sw">0</div></div>
+            <div class="scard"><h4 id="sc2">Kechikkan</h4><div class="snum" id="sl">0</div></div>
+            <div class="scard"><h4 id="sc3">Kelmagan</h4><div class="snum" id="sa">0</div></div>
+            <div class="scard"><h4 id="sc4">Sana</h4><div class="snum" id="sd" style="font-size:13px">-</div></div>
+          </div>
+          <div class="box">
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+              <span class="btitle" id="att_t" style="margin:0">Hodimlar nazorati</span>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <div class="drange">
+                  <label id="from_l">Dan:</label>
+                  <input type="date" id="fd_from" onchange="loadAtt()">
+                  <label id="to_l">Gacha:</label>
+                  <input type="date" id="fd_to" onchange="loadAtt()">
+                </div>
+                <button class="bg2" id="b_today" onclick="setToday()">Bugun</button>
+                <button class="bb" id="b_monthly" onclick="toggleMonthly()">Oylik</button>
+              </div>
+            </div>
+            <div class="frow">
+              <input type="text" id="fsearch" placeholder="Qidirish..." oninput="filterAtt()" style="flex:1;min-width:100px;">
+              <select id="fstatus" onchange="filterAtt()">
+                <option value="" id="o_all">Barcha</option>
+                <option value="keldi" id="o_came">Keldi</option>
+                <option value="kechikkan" id="o_late">Kechikkan</option>
+                <option value="kelmadi" id="o_abs">Kelmadi</option>
+              </select>
+              <input type="month" id="fmonth" style="font-size:12px;padding:7px 9px;border:1.5px solid var(--border2);border-radius:var(--radius-sm);background:var(--input-bg);color:var(--text);">
+              <button class="bg2" id="b_cm" onclick="setCurMonth()">Joriy oy</button>
+              <button class="bb" id="b_ref" onclick="loadAtt()">Yangilash</button>
+            </div>
+            <div class="tbl-wrap">
+              <table class="tbl" style="min-width:720px;">
+                <thead><tr>
+                  <th>#</th><th id="th1">Ism familiya</th><th id="th2">Login</th>
+                  <th id="th4">O'zgartirish</th><th id="th5">Kelgan vaqti</th>
+                  <th id="th6">Kechikish</th><th id="th7">Ishlagan soat</th>
+                  <th id="th_afk">AFK vaqti</th><th id="th8">Status</th>
+                </tr></thead>
+                <tbody id="att_body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="box hidden" id="mbox">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+              <span class="btitle" id="mth_t" style="margin:0">Oylik hisobot</span>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-size:11px;color:var(--text3)" id="mlbl"></span>
+                <button class="btn-export" onclick="exportExcel()">📊 Excel</button>
+                <button class="btn-export" onclick="exportPDF()">📄 PDF</button>
+              </div>
+            </div>
+            <div class="mst" style="grid-template-columns:repeat(2,1fr)">
+              <div class="ms"><h5 id="ms1">Hodimlar</h5><div class="v" id="me">0</div></div>
+              <div class="ms"><h5 id="ms5">Jami KPI</h5><div class="v" id="mk" style="color:var(--success)">0</div></div>
+            </div>
+            <div class="monthly-dashboard">
+              <div class="md-panel">
+                <div class="md-title" id="md_title">Dashboard</div>
+                <div class="md-grid">
+                  <div class="md-item"><h5 id="md1">To'liq kunlar</h5><div class="v" id="md_full">0</div></div>
+                  <div class="md-item"><h5 id="md2">Yarim kunlar</h5><div class="v" id="md_half">0</div></div>
+                  <div class="md-item"><h5 id="md3">Davomat %</h5><div class="v" id="md_att">0%</div></div>
+                  <div class="md-item"><h5 id="md4">Ishlagan soat</h5><div class="v" id="md_hours">0h 0m</div></div>
+                </div>
+              </div>
+              <div class="md-panel">
+                <div class="md-title" id="md_note_title">Oy bo'yicha izoh</div>
+                <div style="font-size:12px;color:var(--text2);line-height:1.7" id="md_note">
+                  Joriy oy tanlangan bo'lsa, hisob-kitob bugungi kungacha olinadi.
+                </div>
+              </div>
+            </div>
+            <div class="tbl-wrap monthly_table_wrap">
+              <table class="tbl" id="monthly_table" style="min-width:1180px;">
+                <thead><tr>
+                  <th>#</th><th id="mt1">Ism familiya</th><th id="mt2">Ishlagan soat</th>
+                  <th id="mt_afk">AFK vaqti</th><th id="mt3">Kechikish</th>
+                  <th id="mt4">Kelmagan</th><th id="mt5">Jarima</th>
+                  <th id="mt6">Qo'shimcha</th><th id="mt7">KPI ball</th>
+                  <th id="mt8">KPI sum</th><th id="mt10">To'liq kun</th><th id="mt11">Yarim kun</th><th id="mt9">Boshqaruv</th>
+                </tr></thead>
+                <tbody id="mbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab_notif" class="hidden">
+          <div class="box">
+            <div class="btitle">🔔 Bildirishnoma yuborish</div>
+            <div class="notif-send-box">
+              <h4 id="ns_title">Hodimga bildirishnoma yuborish</h4>
+              <div class="notif-send-row" style="margin-bottom:8px">
+                <select id="ns_emp" style="max-width:200px;">
+                  <option value="all">Hammaga</option>
+                </select>
+                <input type="text" id="ns_title_inp" placeholder="Sarlavha...">
+              </div>
+              <div class="notif-send-row">
+                <textarea id="ns_body" placeholder="Xabar matni..." style="min-height:70px;"></textarea>
+              </div>
+              <button class="bb" style="margin-top:8px;" onclick="adminSendNotif()">📤 Yuborish</button>
+            </div>
+            <div class="btitle" style="margin-top:16px">📋 Yuborilgan bildirishnomalar</div>
+            <div id="notif_list_admin"></div>
+          </div>
+        </div>
+
+        <div id="tab_feedback" class="hidden">
+          <div class="box">
+            <div class="btitle">💬 Hodimlar fikr va shikoyatlari</div>
+            <div class="frow" style="margin-bottom:12px">
+              <select id="fb_filter" onchange="loadFeedbackAdmin()">
+                <option value="">Barcha</option>
+                <option value="new">Yangi</option>
+                <option value="replied">Javob berilgan</option>
+                <option value="complaint">Shikoyat</option>
+                <option value="suggestion">Taklif</option>
+              </select>
+              <button class="bg2" onclick="loadFeedbackAdmin()">Yangilash</button>
+            </div>
+            <div id="feedback_list_admin">
+              <div class="sk-line skeleton"></div>
+              <div class="sk-line skeleton short"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="tab_settings" class="hidden">
+          <div class="box">
+            <div class="btitle">⚙️ <span id="set_t">Hodimlar boshqaruvi</span></div>
+            <div class="sf">
+              <input type="text" id="ne_n" placeholder="Ism familiya">
+              <input type="email" id="ne_l" placeholder="Email">
+              <input type="password" id="ne_p" placeholder="Parol">
+              <select id="ne_k">
+                <option value="senior">Eski hodim (560 000 UZS)</option>
+                <option value="junior">Yangi hodim (400 000 UZS)</option>
+              </select>
+              <button class="bb" id="b_addemp" onclick="addEmp()">Qo'shish</button>
+            </div>
+            <div class="tbl-wrap">
+              <table class="tbl" style="min-width:480px;">
+                <thead><tr><th>#</th><th id="et1">Ism familiya</th><th id="et2">Login</th><th id="et3">Parol</th><th>Yuz</th><th id="et4">KPI summasi</th><th id="et5">O'chirish</th></tr></thead>
+                <tbody id="emp_body"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="box">
+            <div class="btitle">🌐 <span id="ip_t">Ruxsat etilgan IP manzillar</span></div>
+            <div class="sf">
+              <input type="text" id="ip_inp" placeholder="192.168.1.100" style="flex:1;">
+              <button class="bb" id="b_addip" onclick="addAllowedIP()">IP qo'shish</button>
+              <button class="bg2" id="b_myip" onclick="addMyIP()">Mening IP</button>
+            </div>
+            <p style="font-size:11.5px;color:var(--text2);margin-bottom:8px">Joriy IP: <strong id="my_ip_show" style="font-family:var(--mono)">...</strong></p>
+            <div id="ip_list" style="font-size:12px;color:var(--text2)">Yuklanmoqda...</div>
+          </div>
+          <div class="box">
+            <div class="btitle">📅 <span id="hol_t">Dam olish kunlari</span></div>
+            <div class="sf">
+              <input type="date" id="hol_d">
+              <button class="bb" id="b_addh" onclick="addHol()">Qo'shish</button>
+            </div>
+            <p style="font-size:11.5px;color:var(--text2);margin-bottom:4px" id="hol_info">Standart: Du–Sha. Yakshanba avtomatik dam olish.</p>
+            <p style="font-size:11.5px;color:var(--text2)" id="hol_list">Qo'shimcha dam olish kuni yo'q</p>
+          </div>
+        </div>
+
+        <div id="tab_kpi" class="hidden">
+          <div class="box">
+            <div class="btitle">🏆 <span id="kpi_t">KPI Qoidalari</span></div>
+            <div class="kbox">
+              <div style="margin-bottom:12px"><strong id="k1">Asosiy KPI</strong><br><span id="k2">Davomat bo'yicha KPI 100 ballik sistemada!</span></div>
+              <div style="margin-bottom:12px"><strong id="k3">Jarimalar</strong><br><span id="k4">Kech qolish</span> — 10 ball<br><span id="k5">Kelmaslik</span> — 20 ball<br><span id="k_afk">AFK (30 daqiqadan ortiq, har daqiqa)</span> — kunlik hisobda</div>
+              <div>
+                <strong id="k6">KPI to'lovlari</strong><br><strong id="k7">Eski hodimlar</strong><br>
+                <div class="krow"><div class="kcol">90–100 ball</div><div>+560 000 UZS</div></div>
+                <div class="krow"><div class="kcol">80–89 ball</div><div>+420 000 UZS</div></div>
+                <div class="krow"><div class="kcol">70–79 ball</div><div>+280 000 UZS</div></div>
+                <div class="krow"><div class="kcol">70 dan kam</div><div>+0 UZS</div></div><br>
+                <strong id="k8">Yangi hodimlar</strong><br>
+                <div class="krow"><div class="kcol">90–100 ball</div><div>+400 000 UZS</div></div>
+                <div class="krow"><div class="kcol">80–89 ball</div><div>+300 000 UZS</div></div>
+                <div class="krow"><div class="kcol">70–79 ball</div><div>+210 000 UZS</div></div>
+                <div class="krow"><div class="kcol">70 dan kam</div><div>+0 UZS</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="employeePage">
+  <div class="ehdr">
+    <div class="ehdr-brand">
+      <img src="images/logo2.png" alt="" style="width:30px;height:30px;object-fit:contain;" onerror="this.style.display='none'">
+      <span class="ehdr-brand-name">Aloqa<span>Pro</span></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">
+      <span style="color:rgba(255,255,255,.6);font-size:11px;font-family:var(--mono);background:rgba(255,255,255,.07);padding:4px 8px;border-radius:6px;" id="empDate"></span>
+      <label class="theme-toggle"><input type="checkbox" id="themeToggle3" onchange="toggleTheme()"><span class="theme-slider"></span></label>
+      <div class="lsw">
+        <button class="lb active" id="el_uz" onclick="setLang('uz')"><span class="flag"><svg viewBox="0 0 34 22"><rect width="34" height="7.33" fill="#1EB3E4"/><rect y="7.33" width="34" height="7.34" fill="#fff"/><rect y="14.67" width="34" height="7.33" fill="#32A84C"/><rect y="6.9" width="34" height=".8" fill="#CE2028"/><rect y="14.3" width="34" height=".8" fill="#CE2028"/><circle cx="9" cy="3.7" r="2.3" fill="#fff"/><circle cx="10.1" cy="3.7" r="2.3" fill="#1EB3E4"/></svg></span></button>
+        <span class="lsep"></span>
+        <button class="lb" id="el_ru" onclick="setLang('ru')"><span class="flag"><svg viewBox="0 0 34 22"><rect width="34" height="7.33" fill="#fff"/><rect y="7.33" width="34" height="7.34" fill="#1C3F94"/><rect y="14.67" width="34" height="7.33" fill="#CE2028"/></svg></span></button>
+      </div>
+      <button class="xbtn" onclick="empNavTab('work')">💼</button>
+      <button class="xbtn" onclick="empNavTab('notif')">🔔 <span id="empNotifBadge" class="notif-badge hidden">0</span></button>
+      <button class="xbtn" onclick="empNavTab('feedback')">💬</button>
+      <button class="xbtn" id="empExit" onclick="doLogout()">Chiqish</button>
+    </div>
+  </div>
+
+  <!-- Mobil uchun pastki navigatsiya -->
+  <div class="emp-bottom-nav" id="empBottomNav">
+    <button class="ebn-btn active" id="ebn_work" onclick="empNavTab('work')"><span>💼</span><span id="ebn_work_lbl">Ish</span></button>
+    <button class="ebn-btn" id="ebn_notif" onclick="empNavTab('notif')"><span>🔔</span><span><span id="ebn_notif_lbl">Xabar</span> <span id="empNotifBadge2" class="notif-badge hidden">0</span></span></button>
+    <button class="ebn-btn" id="ebn_feedback" onclick="empNavTab('feedback')"><span>💬</span><span id="ebn_feedback_lbl">Fikr</span></button>
+    <button class="ebn-btn" onclick="doLogout()"><span>🚪</span><span id="ebn_exit_lbl">Chiqish</span></button>
+  </div>
+
+  <div id="emp_tab_work">
+    <div class="ebody">
+      <div class="ec">
+        <h2 id="ew_t">Bugungi ish jarayoni</h2>
+        <div class="tags">
+          <span class="tag tb" id="e_mtag">2026-04</span>
+          <span class="tag tg" id="e_stag">Holat: Boshlanmagan</span>
+          <span class="tag to" id="e_ltag">Kechikish: 0 daqiqa</span>
+        </div>
+        <div class="abtns">
+          <button class="abtn ast" id="bs" onclick="empStart()">Boshlash</button>
+          <button class="abtn alu" id="bl" onclick="empLunch()">Tushlik</button>
+          <button class="abtn bg2" id="bp" onclick="empPrayer()">Namoz</button>
+          <button class="abtn aen" id="be" onclick="empEnd()">Yakunlash</button>
+        </div>
+        <button class="aco hidden" id="bc" onclick="empContinue()">Davom ettirish</button>
+        <div class="tgrid">
+          <div class="tb2"><h4 id="ewl">Ish vaqti</h4><div class="tv" id="tw">00:00:00</div></div>
+          <div class="tb2"><h4 id="ell">Tushlik</h4><div class="tv" id="tl">00:00:00</div></div>
+        </div>
+        <div class="break-tracker" id="breakTracker">
+          <h4 id="break_day_lbl">☕ Tanaffus limiti (kun)</h4>
+          <div class="break-bar-wrap"><div class="break-bar" id="breakBar" style="width:0%"></div></div>
+          <div class="break-info">
+            <span id="breakUsed">0 daq</span>
+            <span id="breakLimit" style="color:var(--warn)">/ 30 daq</span>
+          </div>
+        </div>
+        <div class="afk-box" id="afkBox">
+          <h4 id="afk_lbl">⚠️ Joyida bo'lmagan vaqt</h4>
+          <div class="afk-total" id="afk_display">00:00:00</div>
+          <div class="afk-count" id="afk_cnt_lbl">0 marta AFK</div>
+          <div class="afk-break-ok hidden" id="afk_break_ok">✅ Tanaffus limiti ichida</div>
+        </div>
+      </div>
+
+      <div class="ec">
+        <h2 id="et_t">Bugungi ma'lumot</h2>
+        <div class="igrid">
+          <div class="ii"><h4 id="ei1">Ish boshlagan</h4><p id="i_s">-</p></div>
+          <div class="ii"><h4 id="ei2">Ish tugagan</h4><p id="i_e">-</p></div>
+          <div class="ii"><h4 id="ei3">Tushlik boshlangan</h4><p id="i_ls">-</p></div>
+          <div class="ii"><h4 id="ei4">Tushlik tugagan</h4><p id="i_le">-</p></div>
+        </div>
+        <div class="igrid" style="margin-top:10px">
+          <div class="ii"><h4 id="ek1">KPI ball (oy)</h4><p id="e_kpi_ball">0 ball</p></div>
+          <div class="ii"><h4 id="ek2">KPI summa (oy)</h4><p id="e_kpi_sum">0 UZS</p></div>
+          <div class="ii"><h4 id="ek3">Bonus/Jarima</h4><p id="e_kpi_bonus">0 ball</p></div>
+          <div class="ii"><h4 id="ek4">Daraja</h4><p id="e_kpi_plan">-</p></div>
+        </div>
+        <div style="margin-top:10px;padding:12px;background:var(--bg3);border-radius:var(--radius-sm);border:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--text2);margin-bottom:5px;font-weight:600" id="face_info_lbl">📷 Yuz nazorati</div>
+          <div id="face_status_inline" style="font-size:12.5px;font-weight:700;">⏳ Yuklanmoqda...</div>
+          <div class="face-reg-box" id="faceRegBox" style="margin-top:8px;">
+            <h4 id="face_reg_title">🎯 Yuzni ro'yxatdan o'tkazish</h4>
+            <div class="face-samples" id="faceSamples"></div>
+            <div class="face-quality" id="faceQuality">0/5 namuna olindi</div>
+            <div class="liveness-indicator">
+              <div class="liveness-dot" id="livenessDot"></div>
+              <span id="livenessText">Liveness tekshirilmoqda...</span>
+            </div>
+            <button class="fw-reg-btn" id="faceRegBtn" onclick="startFaceRegistration()" style="font-size:12px;padding:8px;">📸 Ro'yxatdan o'tish</button>
+          </div>
+        </div>
+        <p class="note" style="margin-top:8px" id="e_note">Yangi kun boshlanganida vaqtlar 0 ga tushadi.</p>
+      </div>
+
+      <div class="ec efw">
+        <div class="mhdr">
+          <h2 id="eh_t">Oy bo'yicha tarix</h2>
+          <div class="mflt">
+            <input type="month" id="e_month" onchange="loadHist()">
+            <button class="bg2" id="e_cm" onclick="setEmpMonth()">Joriy oy</button>
+          </div>
+        </div>
+        <div class="tbl-wrap">
+          <table class="tbl" style="min-width:660px;">
+            <thead><tr>
+              <th>#</th><th id="ht1">Sana</th><th id="ht2">Boshlagan</th>
+              <th id="ht3">Tushlik bosh.</th><th id="ht4">Tushlik tug.</th>
+              <th id="ht5">Tugagan</th><th id="ht6">Kechikish</th>
+              <th id="ht7">Ish vaqti</th><th id="ht8">Tushlik</th>
+              <th id="ht_afk">AFK</th><th id="ht9">Status</th>
+            </tr></thead>
+            <tbody id="hbody"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:16px;flex-wrap:wrap;">
+          <div><div style="font-size:11px;color:var(--text2)" id="el_lbl">Kechikishlar (oy):</div><div style="font-size:20px;font-weight:800;margin-top:4px;font-family:var(--mono)" id="e_lc">0</div></div>
+          <div><div style="font-size:11px;color:var(--text2)" id="afk_month_lbl">AFK (oy jami):</div><div style="font-size:20px;font-weight:800;margin-top:4px;color:var(--danger);font-family:var(--mono)" id="e_afk_total">0 daqiqa</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="emp_tab_notif" class="hidden" style="padding:16px">
+    <div class="box">
+      <div class="btitle" id="emp_notif_title">🔔 Bildirishnomalar</div>
+      <button class="push-notif-btn" id="enablePushBtn" onclick="requestPushPermission()">🔔 Push bildirishnomalarni yoqish</button>
+      <div id="notif_list_emp"></div>
+    </div>
+  </div>
+
+  <div id="emp_tab_feedback" class="hidden" style="padding:16px">
+    <div class="box">
+      <div class="btitle" id="emp_fb_send_title">💬 Fikr/Shikoyat yuborish</div>
+      <div class="sf" style="flex-direction:column;align-items:stretch">
+        <select id="fb_type" style="padding:9px;border:1.5px solid var(--border2);border-radius:var(--radius-sm);background:var(--input-bg);color:var(--text);font-family:var(--font);">
+          <option value="suggestion" id="fb_opt_suggestion">💡 Taklif</option>
+          <option value="complaint" id="fb_opt_complaint">⚠️ Shikoyat</option>
+          <option value="other" id="fb_opt_other">📝 Boshqa</option>
+        </select>
+        <textarea id="fb_msg" placeholder="Xabaringizni yozing..." style="padding:10px;background:var(--input-bg);border:1.5px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font);font-size:13px;resize:vertical;min-height:100px;outline:none;margin-top:8px;"></textarea>
+        <button class="bb" id="fb_send_btn" style="margin-top:8px;width:fit-content" onclick="sendFeedback()">📤 Yuborish</button>
+      </div>
+      <div style="margin-top:16px">
+        <div class="btitle" id="emp_fb_my_title">📋 Mening fikrlarim</div>
+        <div id="my_feedback_list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="faceWidget" class="hidden">
+  <div class="fw-title">
+    <span>📷 Yuz nazorati</span>
+    <button class="fw-minimize" onclick="toggleFaceWidget()">—</button>
+  </div>
+  <div class="fw-video-wrap">
+    <video id="faceVideo" autoplay muted playsinline></video>
+    <canvas id="faceCanvas" style="position:absolute;top:0;left:0;pointer-events:none;"></canvas>
+  </div>
+  <div class="fw-status">
+    <div class="fw-dot gray" id="faceDot"></div>
+    <span class="fw-txt" id="faceTxt">Yuklanmoqda...</span>
+  </div>
+  <div class="fw-timer hidden" id="afkTimer">⏱ AFK: <span id="afkTimerVal">00:00</span></div>
+  <div class="fw-afk" id="afkTotalWidget">Jami AFK: 0 daq</div>
+  <div class="liveness-indicator" id="livenessWidget" style="margin-top:4px">
+    <div class="liveness-dot" id="livenessWidgetDot"></div>
+    <span id="livenessWidgetTxt" style="font-size:10px;color:var(--text3)">Liveness...</span>
+  </div>
+  <div class="fw-zoom">
+    <button type="button" onclick="setFaceZoom(-0.1)">−</button>
+    <button type="button" onclick="resetFaceZoom()">100%</button>
+    <button type="button" onclick="setFaceZoom(0.1)">+</button>
+  </div>
+</div>
+
+<div class="ov hidden" id="m_welcome">
+  <div class="modal">
+    <p id="mw_txt">Eslatma: "Yakunlash" tugmasini faqat ish kuni to'liq tugagandan keyin bosing!</p>
+    <button class="msingle" id="mw_ok" onclick="closeWelcome()">OK</button>
+  </div>
+</div>
+<div class="ov hidden" id="m_ep">
+  <div class="modal">
+    <h3 id="mep_t" style="color:var(--accent)">Parolni o'zgartirish</h3>
+    <input type="hidden" id="ep_id">
+    <div class="iw" style="margin:14px 0">
+      <input type="password" id="ep_np" placeholder="Yangi parol" style="background:var(--input-bg);color:var(--text)">
+    </div>
+    <div class="mbtns">
+      <button class="mok" id="mep_s" onclick="savePass()">Saqlash</button>
+      <button class="mno" id="mep_c" onclick="closeEP()">Bekor</button>
+    </div>
+  </div>
+</div>
+<div class="ov hidden afk-modal-border" id="m_afk_warn">
+  <div class="modal">
+    <h3 style="color:var(--danger)" id="afk_warn_title">⚠️ Yuzingiz aniqlanmadi!</h3>
+    <p id="afk_warn_txt" style="color:var(--text2);font-weight:500;">Kamera oldida o'tiring.</p>
+    <div class="countdown" id="afk_countdown">05:00</div>
+    <p style="font-size:11px;color:var(--text3)" id="afk_warn_sub">5 daqiqa ichida yuz aniqlanmasa, AFK hisoblanadi</p>
+    <button class="mok" onclick="dismissAfkWarn()" id="afk_im_here">Men shu yerdaman ✋</button>
+  </div>
+</div>
+<div class="ov hidden" id="m_auto_end">
+  <div class="modal">
+    <h3 style="color:var(--success)">✅ Ish yakunlandi</h3>
+    <p id="auto_end_txt" style="color:var(--text2)">Soat 18:15 bo'ldi. Tizim tomonidan ish yakunlandi.</p>
+    <button class="msingle" onclick="document.getElementById('m_auto_end').classList.add('hidden')">OK</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  CONFIG
+// ============================================================
+const SUPABASE_URL  = 'https://hdbhdddekjjjtwtyocfa.supabase.co';
+const SUPABASE_ANON = 'sb_publishable_CZUB0mOSzmmCvviNzWykzw_B3_0-5bE';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const FACE_CHECK_INTERVAL = 120000;
+const FACE_MATCH_THRESHOLD = 0.34;
+const FACE_SOFT_THRESHOLD = 0.48;
+// ✅ XAVFSIZROQ: boshqa shaxs tasdiqlanib ketmasligi uchun 5 ketma-ket match talab qilinadi
+const STABLE_HIT_REQUIRED = 1;
+const AFK_GRACE_SEC       = 600;
+const WORK_START_MIN      = 9*60;
+const LATE_AFTER_MIN      = 9*60+5;
+const HALF_DAY_AFTER_MIN  = 11*60;
+const BREAK_LIMIT_SEC     = 1800;
+const AUTO_END_HOUR       = 18;
+const AUTO_END_MIN        = 15;
+
+// ============================================================
+//  THEME
+// ============================================================
+// ============================================================
+//  GLOBAL STATE
+// ============================================================
+// misc runtime flags
+
+// ============================================================
+//  GLOBAL STATE
+// ============================================================
+let empState = 'not_started';
+let wStart = null;
+let lStart = null;
+let prayerStart = null;
+
+let wAccum = 0;
+let lAccum = 0;
+let prayerAccum = 0;
+let afkSeconds = 0;
+let afkCount = 0;
+let breakSeconds = 0;
+
+let currentAfkStart = null;
+let isAfk = false;
+let autoEndDone = false;
+
+let wIv = null;
+let lIv = null;
+let autoEndIv = null;
+let faceCheckIv = null;
+
+let faceWidgetMin = false;
+let faceZoom = 1;
+
+let faceApiLoaded = false;
+let isDetecting = false;
+let isDetectingStartTime = 0;
+let faceMissCount = 0;
+let faceHitCount = 0;
+let myFaceDescriptor = null;
+let regSamples = [];
+let regCapturing = false;
+
+let currentTheme = localStorage.getItem('aloqa_theme') || 'dark';
+let deferredPrompt = null;
+
+function applyTheme(th) {
+  document.documentElement.setAttribute('data-theme', th);
+  ['themeToggle','themeToggle2','themeToggle3','themeToggle4'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = th === 'light';
+  });
+  localStorage.setItem('aloqa_theme', th);
+  currentTheme = th;
+}
+function toggleTheme() {
+  applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+  ['themeToggle','themeToggle2','themeToggle3','themeToggle4'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.checked = currentTheme === 'light';
+  });
+}
+applyTheme(currentTheme);
+
+// ============================================================
+//  TOAST
+// ============================================================
+function toast(type, title, msg, duration = 3500) {
+  const icons = { success:'✅', error:'❌', warn:'⚠️', info:'ℹ️' };
+  const c = document.getElementById('toast-container');
+  const d = document.createElement('div');
+  d.className = `toast ${type}`;
+  d.innerHTML = `<span class="toast-icon">${icons[type]||'ℹ️'}</span><div class="toast-body"><div class="toast-title">${title}</div><div class="toast-msg">${msg||''}</div></div>`;
+  c.appendChild(d);
+  setTimeout(() => {
+    d.classList.add('removing');
+    setTimeout(() => d.remove(), 320);
+  }, duration);
+}
+
+// ============================================================
+//  PWA
+// ============================================================
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault(); deferredPrompt = e;
+  const b = document.getElementById('installBanner');
+  if (b && !localStorage.getItem('pwa_dismissed')) b.style.display = 'block';
+});
+function installPWA() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then(() => { deferredPrompt = null; dismissInstall(); });
+}
+function dismissInstall() {
+  localStorage.setItem('pwa_dismissed','1');
+  const b = document.getElementById('installBanner');
+  if (b) b.style.display = 'none';
+}
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(() => {});
+}
+
+// ============================================================
+//  SIDEBAR
+// ============================================================
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('sb_overlay').classList.toggle('open');}
+function closeSidebar(){document.getElementById('sidebar').classList.remove('open');document.getElementById('sb_overlay').classList.remove('open');}
+
+// ============================================================
+//  IP CHECK
+// ============================================================
+let userPublicIP = '';
+async function getUserIP(){try{const r=await fetch('https://api.ipify.org?format=json');const d=await r.json();return d.ip||'';}catch(e){return '';}}
+
+async function getAllowedIPs(){
+  try{
+    const{data,error}=await sb.from('settings').select('value').eq('key','allowed_ips').maybeSingle();
+    if(error||!data)return [];
+    return JSON.parse(data.value||'[]');
+  }catch(e){return [];}
+}
+async function saveAllowedIPs(arr){
+  try{
+    const json=JSON.stringify(arr);
+    const{data:ex}=await sb.from('settings').select('id').eq('key','allowed_ips').maybeSingle();
+    if(ex){
+      await sb.from('settings').update({value:json}).eq('key','allowed_ips');
+    }else{
+      await sb.from('settings').insert({key:'allowed_ips',value:json});
+    }
+    await updateIPList();
+  }catch(e){console.error('saveAllowedIPs error:',e);}
+}
+async function checkIPAccess(role){if(role==='admin')return true;const allowed=await getAllowedIPs();if(allowed.length===0)return true;if(!userPublicIP)userPublicIP=await getUserIP();return allowed.includes(userPublicIP);}
+async function addAllowedIP(){
+  const val=document.getElementById('ip_inp').value.trim();
+  if(!val){toast('warn','IP','IP kiriting!');return;}
+  const arr=await getAllowedIPs();
+  if(!arr.includes(val))arr.push(val);
+  await saveAllowedIPs(arr);
+  document.getElementById('ip_inp').value='';
+  toast('success','IP','Qo\'shildi');
+}
+async function addMyIP(){
+  if(!userPublicIP)userPublicIP=await getUserIP();
+  if(!userPublicIP){toast('error','Xato','IP aniqlanmadi');return;}
+  const arr=await getAllowedIPs();
+  if(!arr.includes(userPublicIP))arr.push(userPublicIP);
+  await saveAllowedIPs(arr);
+  toast('success','IP','Mening IP qo\'shildi');
+}
+async function removeIP(ip){
+  const arr=await getAllowedIPs();
+  await saveAllowedIPs(arr.filter(x=>x!==ip));
+}
+async function updateIPList(){
+  const el=document.getElementById('ip_list');if(!el)return;
+  el.innerHTML='<span style="color:var(--text3);font-size:12px">Yuklanmoqda...</span>';
+  const arr=await getAllowedIPs();
+  if(arr.length===0){el.innerHTML='<span style="color:var(--text3);font-size:12px">Hozircha ruxsat etilgan IP yo\'q (cheklov yo\'q)</span>';return;}
+  el.innerHTML=arr.map(ip=>`<span style="display:inline-flex;align-items:center;gap:4px;background:var(--bg3);border-radius:6px;padding:3px 9px;font-size:12px;margin:2px;font-family:var(--mono)"><strong>${ip}</strong><button onclick="removeIP('${ip}')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:14px;line-height:1">×</button></span>`).join(' ');
+}
+function showIPBlock(ip){['loginPage','adminPage','employeePage'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});document.getElementById('ipBlockPage').style.display='flex';st('ipb_val',ip||'—');}
+
+// ============================================================
+//  TRANSLATIONS
+// ============================================================
+const TR = {
+uz:{loginTitle:'Nazorat tizimiga xush kelibsiz!',loginSub:'Login va parolni kiriting!',loginBtn:'Kirish',loginPH:'Login',passPH:'Parol',loginErr:'Login yoki parol noto\'g\'ri!',loginFill:'Login va parolni kiriting!',exit:'Chiqish',today:'Bugun',nav_m:'Asosiy',nav_notif:'Bildirishnomalar',nav_fb:'Fikrlar',nav_s:'Sozlamalar',nav_k:'KPI Qoidalar',adm_m:'Boshqaruv | Asosiy',adm_s:'Boshqaruv | Sozlamalar',adm_k:'Boshqaruv | KPI',sc1:'Bugun ishda',sc2:'Kechikkan',sc3:'Kelmagan',sc4:'Sana',att_t:'Hodimlar nazorati',from_l:'Dan:',to_l:'Gacha:',b_today:'Bugun',b_monthly:'Oylik',b_cm:'Joriy oy',b_ref:'Yangilash',fsearch:'Qidirish...',o_all:'Barcha',o_came:'Keldi',o_late:'Kechikkan',o_abs:'Kelmadi',th1:'Ism familiya',th2:'Login',th4:'O\'zgartirish',th5:'Kelgan vaqti',th6:'Kechikish',th7:'Ishlagan soat',th_afk:'AFK vaqti',th8:'Status',mth_t:'Oylik hisobot',ms1:'Hodimlar',ms2:'Kechikishlar',ms3:'Kelmagan',ms4:'Ish soati',ms5:'Jami KPI',mt1:'Ism familiya',mt2:'Ishlagan soat',mt_afk:'AFK vaqti',mt3:'Kechikish',mt4:'Kelmagan',mt5:'Jarima',mt6:'Qo\'shimcha',mt7:'KPI ball',mt8:'KPI sum',mt10:'To\'liq kun',mt11:'Yarim kun',mt9:'Boshqaruv',set_t:'Hodimlar boshqaruvi',b_addemp:'Qo\'shish',et1:'Ism familiya',et2:'Login',et3:'Parol',et4:'KPI summasi',et5:'O\'chirish',hol_t:'Dam olish kunlari',b_addh:'Qo\'shish',hol_info:'Standart: Du–Sha. Yakshanba avtomatik dam olish.',hol_none:'Qo\'shimcha dam olish kuni yo\'q',kpi_t:'KPI Qoidalari',k1:'Asosiy KPI',k2:'Davomat bo\'yicha KPI 100 ballik sistemada!',k3:'Jarimalar',k4:'Kech qolish',k5:'Kelmaslik',k_afk:'AFK (30 daqiqadan ortiq)',k6:'KPI to\'lovlari',k7:'Eski hodimlar',k8:'Yangi hodimlar',ew_t:'Bugungi ish jarayoni',et_t:'Bugungi ma\'lumot',eh_t:'Oy bo\'yicha tarix',st_pre:'Holat:',lt_pre:'Kechikish:',lt_u:'daqiqa',st0:'Boshlanmagan',st1:'Ishda',st2:'Tushlikda',st4:'Yakunlandi',st_half:'Yarim kun',st_full:'To\'liq kun',bs:'Boshlash',bl:'Tushlik',be:'Yakunlash',bc:'Davom ettirish',bb:'Qaytish',ewl:'Ish vaqti',ell:'Tushlik',ewd:'Ish vaqti',eld:'Tushlik vaqti',e_note:'Yangi kun boshlanganida vaqtlar 0 ga tushadi.',ei1:'Ish boshlagan',ei2:'Ish tugagan',ei3:'Tushlik boshlangan',ei4:'Tushlik tugagan',ht1:'Sana',ht2:'Boshlagan',ht3:'Tushlik bosh.',ht4:'Tushlik tug.',ht5:'Tugagan',ht6:'Kechikish',ht7:'Ish vaqti',ht8:'Tushlik',ht_afk:'AFK',ht9:'Status',eh_note:'Faqat tanlangan oy ma\'lumotlari.',el_lbl:'Kechikishlar (oy):',afk_month_lbl:'AFK (oy jami):',e_cm:'Joriy oy',mw_txt:'Eslatma: "Yakunlash" tugmasini faqat ish kuni to\'liq tugagandan keyin bosing!',mw_ok:'OK',mep_t:'Parolni o\'zgartirish',mep_s:'Saqlash',mep_c:'Bekor qilish',ep_ph:'Yangi parol',b_came:'Keldi',b_late:'Kechikkan',b_abs:'Kelmadi',b_off:'Dam olish',del_c:'Hodimni o\'chirishni tasdiqlaysizmi?',no_data:'Ma\'lumot yo\'q',daq:'daq',marta:'marta',kun:'kun',soat:'soat',daqiqa:'daqiqa',ball:'ball',hisobot:'hisobot',change:'O\'zgartirish',delete:'O\'chirish',reset:'Reset',fill_all:'Barcha maydonlarni to\'ldiring!',face_detected:'✅ Yuz aniqlandi',face_not_detected:'❌ Yuz aniqlanmadi',face_loading:'⏳ Yuklanmoqda...',face_unknown:'⚠️ Noma\'lum yuz',afk_lbl:'⚠️ Joyida bo\'lmagan vaqt',afk_cnt_lbl:'marta AFK',afk_warn_title:'⚠️ Yuzingiz aniqlanmadi!',afk_warn_txt:'Kamera oldida o\'tiring. AFK vaqt hisoblanmoqda.',afk_warn_sub:'10 daqiqa ichida yuz aniqlanmasa, AFK hisoblanadi',afk_im_here:'Men shu yerdaman ✋',auto_end_txt:'Soat 18:15 bo\'ldi. Tizim tomonidan ish yakunlandi.',auto_ended:'Tizim yakunladi',afk_banner:'Yuz aniqlanmadi! AFK vaqt hisoblanmoqda...',afk_over:'oshiqcha',kpi_sr:'Eski hodim (560K)',kpi_jr:'Yangi hodim (400K)',ek1:'KPI ball (oy)',ek2:'KPI summasi (oy)',ek3:'Bonus/Jarima',ek4:'Tarif',break_day_lbl:'☕ Tanaffus limiti (kun)',face_info_lbl:'📷 Yuz nazorati',face_reg_title:'🎯 Yuzni ro\'yxatdan o\'tkazish',liveness_text:'Liveness tekshirilmoqda...',face_reg_btn:'📸 Ro\'yxatdan o\'tish',emp_notif_title:'🔔 Bildirishnomalar',enable_push:'🔔 Push bildirishnomalarni yoqish',emp_fb_send_title:'💬 Fikr/Shikoyat yuborish',emp_fb_my_title:'📋 Mening fikrlarim',fb_opt_suggestion:'💡 Taklif',fb_opt_complaint:'⚠️ Shikoyat',fb_opt_other:'📝 Boshqa',fb_placeholder:'Xabaringizni yozing...',send_btn:'📤 Yuborish',face_check_every:'Har 2 daqiqada tekshiriladi',st_prayer:'Namoz',bp:'Namoz',bbp:'Namozdan qaytish',ek4:'Daraja',level_sr:'Senior',level_jr:'Junior',md_title:'Dashboard',md1:'To\'liq kunlar',md2:'Yarim kunlar',md3:'Davomat %',md4:'Ishlagan soat',md_note_title:'Oy bo\'yicha izoh',md_note:'Joriy oy tanlangan bo\'lsa, hisob-kitob bugungi kungacha olinadi.',ebn_work_lbl:'Ish',ebn_notif_lbl:'Xabar',ebn_feedback_lbl:'Fikr',ebn_exit_lbl:'Chiqish'},
+ru:{loginTitle:'Добро пожаловать!',loginSub:'Введите логин и пароль!',loginBtn:'Войти',loginPH:'Логин',passPH:'Пароль',loginErr:'Неверный логин или пароль!',loginFill:'Введите логин и пароль!',exit:'Выйти',today:'Сегодня',nav_m:'Главная',nav_notif:'Уведомления',nav_fb:'Отзывы',nav_s:'Настройки',nav_k:'Правила KPI',adm_m:'Управление | Главная',adm_s:'Управление | Настройки',adm_k:'Управление | KPI',sc1:'На работе',sc2:'Опоздали',sc3:'Не пришли',sc4:'Дата',att_t:'Контроль сотрудников',from_l:'От:',to_l:'До:',b_today:'Сегодня',b_monthly:'Месяц',b_cm:'Тек. месяц',b_ref:'Обновить',fsearch:'Поиск...',o_all:'Все',o_came:'Пришёл',o_late:'Опоздал',o_abs:'Не пришёл',th1:'ФИО',th2:'Логин',th4:'Изменить',th5:'Приход',th6:'Опоздание',th7:'Отработано',th_afk:'AFK время',th8:'Статус',mth_t:'Месячный отчёт',ms1:'Сотрудников',ms2:'Опозданий',ms3:'Пропусков',ms4:'Раб.часов',ms5:'Итого KPI',mt1:'ФИО',mt2:'Отработано',mt_afk:'AFK время',mt3:'Опоздания',mt4:'Пропуски',mt5:'Штраф',mt6:'Доп.баллы',mt7:'KPI балл',mt8:'KPI сумма',mt10:'Полный день',mt11:'Полдня',mt9:'Управление',set_t:'Управление сотрудниками',b_addemp:'Добавить',et1:'ФИО',et2:'Логин',et3:'Пароль',et4:'Сумма KPI',et5:'Удалить',hol_t:'Выходные дни',b_addh:'Добавить',hol_info:'Стандарт: Пн–Сб. Воскресенье — выходной.',hol_none:'Доп. выходных нет',kpi_t:'Правила KPI',k1:'Основной KPI',k2:'KPI в 100-балльной системе!',k3:'Штрафы',k4:'Опоздание',k5:'Прогул',k_afk:'AFK (более 30 минут)',k6:'Выплаты KPI',k7:'Старые сотрудники',k8:'Новые сотрудники',ew_t:'Рабочий процесс',et_t:'Сегодня',eh_t:'История за месяц',st_pre:'Статус:',lt_pre:'Опоздание:',lt_u:'мин',st0:'Не начат',st1:'На работе',st2:'В обеде',st4:'Завершён',st_half:'Полдня',st_full:'Полный день',bs:'Начать',bl:'Обед',be:'Завершить',bc:'Продолжить',bb:'Вернуться',ewl:'Рабочее время',ell:'Время обеда',ewd:'Рабочее время',eld:'Время обеда',e_note:'При новом дне таймеры сбрасываются.',ei1:'Начало',ei2:'Конец',ei3:'Обед нач.',ei4:'Обед кон.',ht1:'Дата',ht2:'Начало',ht3:'Обед нач.',ht4:'Обед кон.',ht5:'Конец',ht6:'Опоздание',ht7:'Раб.время',ht8:'Обед',ht_afk:'AFK',ht9:'Статус',eh_note:'Данные выбранного месяца.',el_lbl:'Опозданий (месяц):',afk_month_lbl:'AFK (итого за месяц):',e_cm:'Тек. месяц',mw_txt:'Нажимайте "Завершить" только после полного окончания рабочего дня!',mw_ok:'ОК',mep_t:'Изменить пароль',mep_s:'Сохранить',mep_c:'Отмена',ep_ph:'Новый пароль',b_came:'Пришёл',b_late:'Опоздал',b_abs:'Не пришёл',b_off:'Выходной',del_c:'Удалить сотрудника?',no_data:'Нет данных',daq:'мин',marta:'раз',kun:'дн.',soat:'ч',daqiqa:'мин',ball:'балл',hisobot:'отчёт',change:'Изменить',delete:'Удалить',reset:'Сброс',fill_all:'Заполните все поля!',face_detected:'✅ Лицо обнаружено',face_not_detected:'❌ Лицо не обнаружено',face_loading:'⏳ Загрузка...',face_unknown:'⚠️ Неизвестное лицо',afk_lbl:'⚠️ Отсутствие',afk_cnt_lbl:'раз AFK',afk_warn_title:'⚠️ Лицо не распознано!',afk_warn_txt:'Сядьте перед камерой.',afk_warn_sub:'Если лицо не обнаружено в течение 10 минут — AFK',afk_im_here:'Я здесь ✋',auto_end_txt:'18:15. Рабочий день завершён системой.',auto_ended:'Завершено системой',afk_banner:'Лицо не обнаружено! Идёт подсчёт AFK...',afk_over:'сверх лимита',kpi_sr:'Старый сотр. (560K)',kpi_jr:'Новый сотр. (400K)',ek1:'KPI балл (месяц)',ek2:'KPI сумма (месяц)',ek3:'Бонус/Штраф',ek4:'Тариф',break_day_lbl:'☕ Лимит перерыва (день)',face_info_lbl:'📷 Контроль лица',face_reg_title:'🎯 Регистрация лица',liveness_text:'Проверка liveness...',face_reg_btn:'📸 Зарегистрировать лицо',emp_notif_title:'🔔 Уведомления',enable_push:'🔔 Включить push-уведомления',emp_fb_send_title:'💬 Отправить отзыв/жалобу',emp_fb_my_title:'📋 Мои отзывы',fb_opt_suggestion:'💡 Предложение',fb_opt_complaint:'⚠️ Жалоба',fb_opt_other:'📝 Другое',fb_placeholder:'Напишите ваше сообщение...',send_btn:'📤 Отправить',face_check_every:'Проверка каждые 2 минуты',st_prayer:'Намаз',bp:'Намаз',bbp:'Вернуться с намаза',ek4:'Уровень',level_sr:'Senior',level_jr:'Junior',md_title:'Дашборд',md1:'Полные дни',md2:'Полдня',md3:'Посещаемость %',md4:'Рабочие часы',md_note_title:'Примечание по месяцу',md_note:'Если выбран текущий месяц, расчёт идёт до сегодняшнего дня.',ebn_work_lbl:'Работа',ebn_notif_lbl:'Уведомления',ebn_feedback_lbl:'Отзывы',ebn_exit_lbl:'Выйти'}
+};
+let lang = localStorage.getItem('aloqa_lang') || 'uz';
+const t = k => (TR[lang]||TR.uz)[k] || k;
+function setLang(l){lang=l;localStorage.setItem('aloqa_lang',l);applyLang();}
+function st(id,v){const e=document.getElementById(id);if(e&&v!==undefined)e.textContent=v;}
+function sp(id,v){const e=document.getElementById(id);if(e)e.placeholder=v;}
+
+function applyLang(){
+  ['ll','al','el','sl'].forEach(p=>{const u=document.getElementById(p+'_uz'),r=document.getElementById(p+'_ru');if(u)u.classList.toggle('active',lang==='uz');if(r)r.classList.toggle('active',lang==='ru');});
+  st('lc_t',t('loginTitle'));st('lc_s',t('loginSub'));const lb=document.getElementById('lbtn');if(lb)lb.textContent=t('loginBtn');
+  sp('inp_l',t('loginPH'));sp('inp_p',t('passPH'));
+  ['n_main','n_notif','n_fb','n_set','n_kpi'].forEach((id,i)=>{st(id,t(['nav_m','nav_notif','nav_fb','nav_s','nav_k'][i]||''));});
+  st('admTitle',t('adm_m'));
+  const ae=document.getElementById('admExit');if(ae)ae.textContent=t('exit');
+  const ee=document.getElementById('empExit');if(ee)ee.textContent=t('exit');
+  updateDates();
+  ['sc1','sc2','sc3','sc4','att_t','from_l','to_l','b_today','b_monthly','b_cm','b_ref','o_all','o_came','o_late','o_abs',
+   'th1','th2','th4','th5','th6','th7','th_afk','th8','mth_t','ms1','ms2','ms3','ms4','ms5',
+   'mt1','mt2','mt_afk','mt3','mt4','mt5','mt6','mt7','mt8','mt9',
+   'set_t','b_addemp','et1','et2','et3','et4','et5','hol_t','b_addh','hol_info',
+   'kpi_t','k1','k2','k3','k4','k5','k_afk','k6','k7','k8',
+   'ew_t','et_t','eh_t','ewl','ell','ewd','eld','e_note',
+   'ei1','ei2','ei3','ei4','ht1','ht2','ht3','ht4','ht5','ht6','ht7','ht8','ht_afk','ht9',
+   'eh_note','el_lbl','afk_month_lbl','e_cm','mw_txt','mw_ok','mep_t','mep_s','mep_c',
+   'afk_lbl','afk_warn_title','afk_warn_txt','afk_warn_sub','afk_im_here','auto_end_txt',
+   'ek1','ek2','ek3','ek4','break_day_lbl','face_info_lbl','face_reg_title','emp_notif_title','emp_fb_send_title','emp_fb_my_title',
+   'ebn_work_lbl','ebn_notif_lbl','ebn_feedback_lbl','ebn_exit_lbl','mt10','mt11','md_title','md1','md2','md3','md4','md_note_title','md_note'
+  ].forEach(k=>st(k,t(k)));
+  st('afkBannerTxt', t('afk_banner'));
+  sp('ep_np',t('ep_ph'));sp('fsearch',t('fsearch'));
+  const bsE=document.getElementById('bs');if(bsE)bsE.textContent=t('bs');
+  const blE=document.getElementById('bl');if(blE)blE.textContent=(empState==='lunch'?t('bb'):t('bl'));
+  const beE=document.getElementById('be');if(beE)beE.textContent=t('be');
+  const bcE=document.getElementById('bc');if(bcE)bcE.textContent=t('bc');
+  const ks=document.getElementById('ne_k');if(ks){ks.options[0].text=t('kpi_sr');ks.options[1].text=t('kpi_jr');}
+  const bp=document.getElementById('bp');if(bp && !bp.disabled)bp.textContent= empState==='prayer' ? t('bbp') : t('bp');
+  const breakLimit=document.getElementById('breakLimit');if(breakLimit)breakLimit.textContent='/ 30 '+t('daq');
+  const btnPush=document.getElementById('enablePushBtn');if(btnPush)btnPush.textContent=t('enable_push');
+  const fbMsg=document.getElementById('fb_msg');if(fbMsg)fbMsg.placeholder=t('fb_placeholder');
+  const fbSend=document.getElementById('fb_send_btn');if(fbSend)fbSend.textContent=t('send_btn');
+  const fbType=document.getElementById('fb_type');if(fbType&&fbType.options.length>=3){fbType.options[0].text=t('fb_opt_suggestion');fbType.options[1].text=t('fb_opt_complaint');fbType.options[2].text=t('fb_opt_other');}
+  const lv=document.getElementById('livenessText');if(lv)lv.textContent=t('liveness_text');
+  const fr=document.getElementById('faceRegBtn');if(fr && !fr.disabled && !/\d\/5/.test(fr.textContent))fr.textContent=t('face_reg_btn');
+  updateHolList();updateEmpStatusTag();
+}
+
+// ============================================================
+//  TIME UTILS
+// ============================================================
+function tzNow(){const n=new Date();return new Date(n.getTime()+(n.getTimezoneOffset()+300)*60000);}
+function fmtD(d){return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear();}
+function todayISO(){const d=tzNow();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function curM(){const d=tzNow();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function fmtHM(d){return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}
+function fmtSec(s){s=Math.max(0,Math.floor(s));return String(Math.floor(s/3600)).padStart(2,'0')+':'+String(Math.floor((s%3600)/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+function fmtSecMM(s){s=Math.max(0,Math.floor(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+function setFaceZoom(delta){
+  faceZoom=Math.max(1,Math.min(2, +(faceZoom+delta).toFixed(2)));
+  applyFaceZoom();
+}
+function resetFaceZoom(){faceZoom=1;applyFaceZoom();}
+function applyFaceZoom(){
+  const v=document.getElementById('faceVideo'), c=document.getElementById('faceCanvas');
+  [v,c].forEach(el=>{ if(el) el.style.transform=`scale(${faceZoom})`; });
+}
+function getMinsFromHHMM(v){if(!v||v==='-')return 0;const p=v.substring(0,5).split(':').map(Number);return (p[0]||0)*60+(p[1]||0);}
+function getDayModeByStart(v){return getMinsFromHHMM(v)>=HALF_DAY_AFTER_MIN?'half_day':'full_day';}
+function getLateMinutesByStart(v){return Math.max(0,getMinsFromHHMM(v)-LATE_AFTER_MIN);}
+function statusTextWithDayMode(base, dayMode){
+  if(dayMode==='half_day') return t('st_half');
+  return base;
+}
+function isWorkDay(ds){const d=new Date(ds+'T12:00:00');if(d.getDay()===0)return false;return!JSON.parse(localStorage.getItem('aloqa_hols')||'[]').includes(ds);}
+function updateDates(){const s=t('today')+': '+fmtD(tzNow());st('admDate',s);st('empDate',s);}
+setInterval(updateDates,30000);
+
+// ============================================================
+//  PUSH NOTIFICATIONS
+// ============================================================
+async function requestPushPermission() {
+  if (!('Notification' in window)) { toast('warn','Push','Bu brauzer bildirishnomalarni qo\'llab-quvvatlamaydi'); return; }
+  const perm = await Notification.requestPermission();
+  if (perm === 'granted') {
+    toast('success','Push','Bildirishnomalar yoqildi!');
+    scheduleReminders();
+    const btn = document.getElementById('enablePushBtn');
+    if (btn) btn.style.display = 'none';
+  } else {
+    toast('warn','Push','Ruxsat berilmadi');
+  }
+}
+let remindersInterval = null;
+
+function scheduleReminders() {
+  checkScheduledNotifs();
+
+  if (remindersInterval) return;
+
+  remindersInterval = setInterval(() => {
+    checkScheduledNotifs();
+  }, 60000);
+}
+let sentToday = {};
+function checkScheduledNotifs() {
+  if (!CU || CU.role !== 'employee') return;
+  const now = tzNow();
+  const h = now.getHours(), m = now.getMinutes();
+  const key = todayISO();
+  if (!sentToday[key]) sentToday[key] = {};
+  const S = sentToday[key];
+  if (h===9&&m===0&&!S.s9){S.s9=true;showLocalNotif('AloqaPro',lang==='uz'?'Ishingiz boshlandi! Samarali kun tilaymiz 💼':'Рабочий день начался! Удачного дня 💼');saveNotifToDB('work_start',lang==='uz'?'Ish boshlandi':'Начало работы',lang==='uz'?'Ishingiz boshlandi! Samarali kun tilaymiz':'Рабочий день начался!');}
+  if (h===11&&m===40&&!S.s11){S.s11=true;showLocalNotif('AloqaPro',lang==='uz'?'Tushlik vaqti yaqin (12:00) 🍽️':'Обеденное время скоро (12:00) 🍽️');saveNotifToDB('lunch_soon','Tushlik yaqin','Tushlik vaqti 20 daqiqadan so\'ng');}
+  if (h===17&&m===50&&!S.s17){S.s17=true;showLocalNotif('AloqaPro',lang==='uz'?'Ish vaqtingiz yakunlanyabdi! Vazifalarni yakunlang ⏰':'Рабочий день заканчивается! Завершите задачи ⏰');saveNotifToDB('work_end_soon','Ish tugayabdi','Ish vaqtingiz yakunlanyabdi, vazifalarni yakunlang');}
+  const breakSec=todayBreakSec();
+  if(breakSec>=600&&breakSec<660&&!S.b10){S.b10=true;showLocalNotif('AloqaPro','⚠️ '+(lang==='uz'?'10 daqiqa tanaffus':'10 минут перерыва'));}
+  if(breakSec>=1200&&breakSec<1260&&!S.b20){S.b20=true;showLocalNotif('AloqaPro','⚠️ '+(lang==='uz'?'20 daqiqa tanaffus — 10 daqiqa qoldi!':'20 минут перерыва — осталось 10 минут!'));}
+  if(breakSec>=1500&&breakSec<1560&&!S.b25){S.b25=true;showLocalNotif('AloqaPro','🔴 '+(lang==='uz'?'25 daqiqa tanaffus! 5 daqiqa qoldi!':'25 минут перерыва! Осталось 5 минут!'));}
+  if(breakSec>=1800&&!S.b30){S.b30=true;showLocalNotif('AloqaPro','🚨 '+(lang==='uz'?'30 daqiqa tanaffus tugadi! AFK hisoblanmoqda!':'30 минут перерыва истекло! AFK!'));}
+}
+function showLocalNotif(title,body){if(Notification.permission==='granted'){try{new Notification(title,{body,icon:'/images/logo2.png'});}catch(e){}}}
+async function saveNotifToDB(type,title,body){if(!CU)return;try{await sb.from('notifications').insert({employee_id:CU.id,title,body,type});}catch(e){console.warn('saveNotifToDB:',e);}loadNotificationsEmp();}
+
+async function adminSendNotif() {
+  const btn = document.querySelector('#tab_notif .bb');
+  if (btn) btn.disabled = true;
+  const empId = document.getElementById('ns_emp').value;
+  const title = document.getElementById('ns_title_inp').value.trim();
+  const body = document.getElementById('ns_body').value.trim();
+  if (!title || !body) {
+    toast('warn','Xato','Sarlavha va matn kiriting');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  try{
+    let targets = [];
+    if (empId === 'all') {
+      const {data:emps} = await sb.from('employees').select('id');
+      targets = (emps||[]).map(e=>e.id);
+    } else {
+      targets = [empId];
+    }
+    const inserts = targets.map(eid => ({employee_id:eid, title, body, type:'admin'}));
+    if (inserts.length > 0) {
+      const {error} = await sb.from('notifications').insert(inserts);
+      if(error) { console.error('Notif insert error:',error.message); toast('error','Xato',error.message); if(btn)btn.disabled=false; return; }
+    }
+    document.getElementById('ns_title_inp').value = '';
+    document.getElementById('ns_body').value = '';
+    toast('success','Bildirishnoma','Yuborildi!');
+    loadNotificationsAdmin();
+  }catch(e){
+    console.error('adminSendNotif error:',e);
+    toast('error','Xato',e.message||'Yuborishda xato');
+  }finally{
+    if(btn)btn.disabled=false;
+  }
+}
+
+async function loadNotificationsEmp() {
+  if (!CU) return;
+  const {data} = await sb.from('notifications').select('*').eq('employee_id',CU.id).order('sent_at',{ascending:false}).limit(30);
+  const c = document.getElementById('notif_list_emp'); if (!c) return;
+  const unread = (data||[]).filter(n=>!n.is_read).length;
+  const badge = document.getElementById('empNotifBadge');
+  if (badge) { badge.textContent = unread; badge.classList.toggle('hidden', unread===0); }
+  if (!data || data.length===0) { c.innerHTML=`<p style="color:var(--text3);font-size:12px;padding:10px">Bildirishnomalar yo'q</p>`; return; }
+  c.innerHTML = data.map(n=>`
+    <div class="notif-item ${n.is_read?'':'unread'}" onclick="markNotifRead('${n.id}')">
+      <div class="notif-dot ${n.is_read?'read':''}"></div>
+      <div class="notif-body">
+        <div class="notif-title">${n.title}</div>
+        <div class="notif-msg">${n.body}</div>
+        <div class="notif-time">${new Date(n.sent_at).toLocaleString()}</div>
+      </div>
+    </div>`).join('');
+}
+
+async function loadNotificationsAdmin() {
+  const {data} = await sb.from('notifications').select('*,employees(name)').order('sent_at',{ascending:false}).limit(50);
+  const c = document.getElementById('notif_list_admin'); if (!c) return;
+  if (!data||data.length===0){c.innerHTML=`<p style="color:var(--text3);font-size:12px">Bildirishnomalar yo'q</p>`;return;}
+  c.innerHTML=data.map(n=>`<div class="notif-item"><div class="notif-body"><div class="notif-title">${n.title} <span style="color:var(--text3);font-size:11px">→ ${n.employees?.name||'?'}</span></div><div class="notif-msg">${n.body}</div><div class="notif-time">${new Date(n.sent_at).toLocaleString()}</div></div></div>`).join('');
+}
+
+async function markNotifRead(id) {
+  await sb.from('notifications').update({is_read:true}).eq('id',id);
+  loadNotificationsEmp();
+}
+
+// ============================================================
+//  FEEDBACK
+// ============================================================
+async function sendFeedback() {
+  if (!CU) return;
+  const type = document.getElementById('fb_type').value;
+  const msg = document.getElementById('fb_msg').value.trim();
+  if (!msg) { toast('warn','Xato','Xabar yozing'); return; }
+  await sb.from('feedback').insert({ employee_id:CU.id, employee_name:CU.name, type, message:msg });
+  document.getElementById('fb_msg').value = '';
+  toast('success','Yuborildi','Fikringiz adminga yuborildi!');
+  loadMyFeedback();
+}
+async function loadMyFeedback() {
+  if (!CU) return;
+  const {data} = await sb.from('feedback').select('*').eq('employee_id',CU.id).order('created_at',{ascending:false}).limit(20);
+  const c = document.getElementById('my_feedback_list'); if (!c) return;
+  if (!data||data.length===0){c.innerHTML=`<p style="color:var(--text3);font-size:12px">Hali fikr yuborilmagan</p>`;return;}
+  c.innerHTML=data.map(fb=>`
+    <div class="fb-item ${fb.status==='new'?'new-item':''}">
+      <div class="fb-header">
+        <span class="fb-type ${fb.type}">${fb.type==='complaint'?'⚠️ Shikoyat':fb.type==='suggestion'?'💡 Taklif':'📝 Boshqa'}</span>
+        <span class="fb-date">${new Date(fb.created_at).toLocaleDateString()}</span>
+      </div>
+      <div class="fb-msg">${fb.message}</div>
+      ${fb.admin_reply?`<div class="fb-replied">💬 Admin: ${fb.admin_reply}</div>`:'<div style="font-size:11px;color:var(--text3)">⏳ Javob kutilmoqda</div>'}
+    </div>`).join('');
+}
+async function loadFeedbackAdmin() {
+  const filter = document.getElementById('fb_filter')?.value || '';
+  let q = sb.from('feedback').select('*,employees(name)').order('created_at',{ascending:false}).limit(50);
+  if (filter==='new') q=q.eq('status','new');
+  else if(filter==='replied') q=q.eq('status','replied');
+  else if(filter==='complaint') q=q.eq('type','complaint');
+  else if(filter==='suggestion') q=q.eq('type','suggestion');
+  const {data} = await q;
+  const c = document.getElementById('feedback_list_admin'); if (!c) return;
+  const newCount = (data||[]).filter(f=>f.status==='new').length;
+  const badge = document.getElementById('fbBadge');
+  if (badge){badge.textContent=newCount;badge.classList.toggle('hidden',newCount===0);}
+  if (!data||data.length===0){c.innerHTML=`<p style="color:var(--text3);font-size:12px">Fikrlar yo'q</p>`;return;}
+  c.innerHTML=data.map(fb=>`
+    <div class="fb-item ${fb.status==='new'?'new-item':''}">
+      <div class="fb-header">
+        <div style="display:flex;align-items:center;gap:8px">
+          <strong class="fb-name">${fb.employees?.name||fb.employee_name||'?'}</strong>
+          <span class="fb-type ${fb.type}">${fb.type==='complaint'?'⚠️ Shikoyat':fb.type==='suggestion'?'💡 Taklif':'📝 Boshqa'}</span>
+        </div>
+        <span class="fb-date">${new Date(fb.created_at).toLocaleString()}</span>
+      </div>
+      <div class="fb-msg">${fb.message}</div>
+      ${fb.admin_reply?`<div class="fb-replied">💬 Javobingiz: ${fb.admin_reply}</div>`:`
+        <div class="fb-reply-area">
+          <textarea id="reply_${fb.id}" placeholder="Javob yozing..."></textarea>
+          <button class="bb" style="margin-top:6px;font-size:11px;padding:6px 12px" onclick="replyFeedback('${fb.id}')">📤 Javob yuborish</button>
+        </div>`}
+    </div>`).join('');
+}
+async function replyFeedback(id) {
+  const ta = document.getElementById('reply_'+id);
+  if (!ta || !ta.value.trim()) { toast('warn','Xato','Javob yozing'); return; }
+  const {data:fb} = await sb.from('feedback').update({admin_reply:ta.value.trim(),status:'replied',replied_at:new Date().toISOString()}).eq('id',id).select().single();
+  if (fb) {
+    try{ await sb.from('notifications').insert({employee_id:fb.employee_id,title:'💬 Admin javob berdi',body:ta.value.trim(),type:'admin'}); }catch(e){}
+    toast('success','Javob','Yuborildi!');
+    loadFeedbackAdmin();
+  }
+}
+
+// ============================================================
+//  LOGIN
+// ============================================================
+let CU = null;
+async function doLogin(){
+  const email = document.getElementById('inp_l').value.trim().toLowerCase();
+  const ps = document.getElementById('inp_p').value.trim();
+  const err = document.getElementById('lerr');
+  err.textContent = '';
+
+  if(!email || !ps){
+    err.textContent = t('loginFill');
+    return;
+  }
+
+  const lbtn = document.getElementById('lbtn');
+  lbtn.textContent = '⏳';
+  lbtn.disabled = true;
+
+  try {
+    // 🔐 AUTH LOGIN
+    const { data, error } = await sb.auth.signInWithPassword({
+      email,
+      password: ps
+    });
+
+    if (error || !data?.user) {
+      err.textContent = t('loginErr');
+      lbtn.textContent = t('loginBtn');
+      lbtn.disabled = false;
+      return;
+    }
+
+    const uid = data.user.id;
+
+    // 🔍 ADMIN TEKSHIRISH
+    const { data: adm } = await sb
+      .from('admins')
+      .select('*')
+      .eq('user_id', uid)
+      .maybeSingle();
+
+    if (adm) {
+      CU = {...adm, role:'admin'};
+      localStorage.setItem('aloqa_u', JSON.stringify(CU));
+
+      lbtn.textContent = t('loginBtn');
+      lbtn.disabled = false;
+
+      showPage('admin');
+      return;
+    }
+
+    // 🔍 EMPLOYEE TEKSHIRISH
+    const { data: emp } = await sb
+      .from('employees')
+      .select('*')
+      .eq('user_id', uid)
+      .maybeSingle();
+
+    if (emp) {
+      const allowed = await checkIPAccess('employee');
+
+      if (!allowed) {
+        lbtn.textContent = t('loginBtn');
+        lbtn.disabled = false;
+
+        if (!userPublicIP) userPublicIP = await getUserIP();
+        showIPBlock(userPublicIP);
+
+        await sb.auth.signOut();
+        return;
+      }
+
+      CU = {...emp, role:'employee'};
+      localStorage.setItem('aloqa_u', JSON.stringify(CU));
+
+      lbtn.textContent = t('loginBtn');
+      lbtn.disabled = false;
+
+      showPage('employee');
+      return;
+    }
+
+    err.textContent = "User bazaga bog‘lanmagan";
+    await sb.auth.signOut();
+
+  } catch (e) {
+    console.error(e);
+    err.textContent = "Tizim xatoligi";
+  }
+
+  lbtn.textContent = t('loginBtn');
+  lbtn.disabled = false;
+}
+async function doLogout(){
+  stopAll();
+  stopFaceDetection();
+
+  await sb.auth.signOut(); // 🔐 muhim
+
+  CU = null;
+  localStorage.removeItem('aloqa_u');
+
+  showPage('login');
+}
+function toggleEye(){const i=document.getElementById('inp_p');i.type=i.type==='password'?'text':'password';}
+
+function showPage(p){
+  document.getElementById('loginPage').style.display=p==='login'?'flex':'none';
+  document.getElementById('adminPage').style.display=p==='admin'?'block':'none';
+  document.getElementById('employeePage').style.display=p==='employee'?'block':'none';
+  document.getElementById('ipBlockPage').style.display='none';
+  document.getElementById('faceWidget').classList.toggle('hidden',p!=='employee');
+  if(p==='admin')initAdmin();
+  if(p==='employee')initEmp();
+  applyLang();
+}
+
+// ============================================================
+//  EMPLOYEE NAV TABS
+// ============================================================
+function empNavTab(tab){
+  ['work','notif','feedback'].forEach(t2=>{const e=document.getElementById('emp_tab_'+t2);if(e)e.classList.toggle('hidden',t2!==tab);});
+  // Bottom nav active holati
+  ['work','notif','feedback'].forEach(t2=>{const b=document.getElementById('ebn_'+t2);if(b)b.classList.toggle('active',t2===tab);});
+  if(tab==='notif')loadNotificationsEmp();
+  if(tab==='feedback')loadMyFeedback();
+}
+
+// ============================================================
+//  ADMIN
+// ============================================================
+let mVisible = false;
+let monthlyData = [];
+
+function initAdmin(){adminTab('main');setToday();setCurMonth();updateDates();updateHolList();updateIPList();loadMyIPDisplay();loadNotifEmpSelect();checkFeedbackBadge();}
+async function loadMyIPDisplay(){if(!userPublicIP)userPublicIP=await getUserIP();const el=document.getElementById('my_ip_show');if(el)el.textContent=userPublicIP||'—';}
+async function loadNotifEmpSelect(){
+  const{data:emps}=await sb.from('employees').select('id,name');
+  const sel=document.getElementById('ns_emp');if(!sel)return;
+  sel.innerHTML='<option value="all">Hammaga</option>';
+  (emps||[]).forEach(e=>{const o=document.createElement('option');o.value=e.id;o.textContent=e.name;sel.appendChild(o);});
+}
+async function checkFeedbackBadge(){
+  const{data}=await sb.from('feedback').select('id').eq('status','new');
+  const badge=document.getElementById('fbBadge');
+  if(badge){const c=(data||[]).length;badge.textContent=c;badge.classList.toggle('hidden',c===0);}
+}
+function adminTab(tab){
+  ['main','notif','feedback','settings','kpi'].forEach(n=>{const el=document.getElementById('tab_'+n);if(el)el.classList.toggle('hidden',n!==tab);});
+  ['nav_main','nav_notif','nav_feedback','nav_settings','nav_kpi'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.classList.toggle('active',['main','notif','feedback','settings','kpi'][i]===tab);});
+  const titles={main:t('adm_m'),settings:t('adm_s'),kpi:t('adm_k'),notif:t('nav_notif'),feedback:t('nav_fb')};
+  st('admTitle',titles[tab]||'');
+  if(tab==='settings'){loadEmpList();updateIPList();}
+  if(tab==='feedback')loadFeedbackAdmin();
+  if(tab==='notif'){loadNotificationsAdmin();loadNotifEmpSelect();}
+}
+function setToday(){const today=todayISO();document.getElementById('fd_from').value=today;document.getElementById('fd_to').value=today;loadAtt();}
+function setCurMonth(){document.getElementById('fmonth').value=curM();}
+function toggleMonthly(){mVisible=!mVisible;document.getElementById('mbox').classList.toggle('hidden',!mVisible);if(mVisible)loadMonthly();}
+
+async function loadAtt() {
+  const dateFrom = document.getElementById('fd_from').value || todayISO();
+  const dateTo = document.getElementById('fd_to').value || todayISO();
+  const search = document.getElementById('fsearch').value || '';
+  const statusFilter = document.getElementById('fstatus').value || '';
+
+  const { data, error } = await sb.rpc('admin_attendance_range', {
+    p_from: dateFrom,
+    p_to: dateTo,
+    p_search: search,
+    p_status: statusFilter
+  });
+
+  if (error) {
+    console.error('loadAtt rpc error:', error);
+    toast('error', 'Xato', error.message || 'Davomat yuklanmadi');
+    return;
+  }
+
+  const tbody = document.getElementById('att_body');
+  tbody.innerHTML = '';
+
+  let w = 0, l = 0, a = 0;
+
+  if (dateFrom === dateTo) {
+    (data || []).forEach((row, i) => {
+      let status = row.status || 'kelmadi';
+      let arr = row.start_time ? row.start_time.substring(0, 5) : '-';
+      let lm = row.late_minutes || 0;
+      let hrs = row.worked_seconds ? secToHMS(row.worked_seconds) : '-';
+      let afkSec = row.afk_seconds || 0;
+      let rowDayMode = row.day_mode || getDayModeByStart(row.start_time);
+
+      if (status === 'keldi' || status === 'auto_ended') w++;
+      else if (status === 'kechikkan') l++;
+      else if (status === 'kelmadi') a++;
+
+      let bc2 = 'bgr', bt = t('b_off');
+      if (status === 'keldi') {
+        bc2 = 'bg';
+        bt = t('b_came');
+      } else if (status === 'kechikkan') {
+        bc2 = 'by';
+        bt = t('b_late');
+      } else if (status === 'kelmadi') {
+        bc2 = 'br';
+        bt = t('b_abs');
+      } else if (status === 'auto_ended') {
+        bc2 = 'bg';
+        bt = '⚙️ Auto';
+      }
+
+      const afkFmt = afkSec > 0 ? (Math.floor(afkSec / 60) + ' ' + t('daq')) : '—';
+
+      const tr = document.createElement('tr');
+      tr.dataset.name = (row.employee_name || '').toLowerCase();
+      tr.dataset.st = status;
+
+      tr.innerHTML = `
+        <td>${i + 1}</td>
+        <td>${row.employee_name || '-'}</td>
+        <td style="font-family:var(--mono)">${row.employee_login || '-'}</td>
+        <td><button class="bsm bsm-g" onclick="openEP('${row.employee_id}')">${t('change')}</button></td>
+        <td style="font-family:var(--mono)">${arr}</td>
+        <td>${lm > 0 ? lm + ' ' + t('daq') : '-'}</td>
+        <td style="font-family:var(--mono)">${hrs}</td>
+        <td style="color:${afkSec > 1800 ? 'var(--danger)' : 'var(--text2)'};">${afkFmt}</td>
+        <td><span class="badge ${bc2}">${bt}</span>${rowDayMode==='half_day' ? ` <span class="badge by">${t('st_half')}</span>` : (row.start_time ? ` <span class="badge bg">${t('st_full')}</span>` : '')}</td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+  } else {
+    const grouped = {};
+
+    (data || []).forEach((row) => {
+      const id = row.employee_id;
+      if (!grouped[id]) {
+        grouped[id] = {
+          employee_id: row.employee_id,
+          employee_name: row.employee_name,
+          employee_login: row.employee_login,
+          totalSec: 0,
+          totalAfk: 0,
+          totalLate: 0,
+          dayCount: 0
+        };
+      }
+
+      grouped[id].totalSec += row.worked_seconds || 0;
+      grouped[id].totalAfk += row.afk_seconds || 0;
+      grouped[id].totalLate += row.late_minutes || 0;
+
+      if (row.work_date) grouped[id].dayCount++;
+    });
+
+    Object.values(grouped).forEach((emp, i) => {
+      const hrs2 = emp.totalSec > 0
+        ? Math.floor(emp.totalSec / 3600) + 'h ' + Math.floor((emp.totalSec % 3600) / 60) + 'm'
+        : '—';
+
+      const afkFmt2 = emp.totalAfk > 0
+        ? Math.floor(emp.totalAfk / 60) + ' ' + t('daq')
+        : '—';
+
+      const tr = document.createElement('tr');
+      tr.dataset.name = (emp.employee_name || '').toLowerCase();
+      tr.dataset.st = 'keldi';
+
+      tr.innerHTML = `
+        <td>${i + 1}</td>
+        <td>${emp.employee_name || '-'}</td>
+        <td>${emp.employee_login || '-'}</td>
+        <td><button class="bsm bsm-g" onclick="openEP('${emp.employee_id}')">${t('change')}</button></td>
+        <td>${emp.dayCount} ${t('kun')}</td>
+        <td>${emp.totalLate > 0 ? emp.totalLate + ' ' + t('daq') : '-'}</td>
+        <td>${hrs2}</td>
+        <td style="color:${emp.totalAfk > 1800 ? 'var(--danger)' : 'var(--text2)'}">${afkFmt2}</td>
+        <td><span class="badge bg">${emp.dayCount} ${t('kun')}</span></td>
+      `;
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  st('sw', '' + w);
+  st('sl', '' + l);
+  st('sa', '' + a);
+  st('sd', dateFrom === dateTo ? fmtD(new Date(dateFrom + 'T12:00:00')) : dateFrom + ' → ' + dateTo);
+}
+function filterAtt(){const q=document.getElementById('fsearch').value.toLowerCase();const s=document.getElementById('fstatus').value;document.querySelectorAll('#att_body tr').forEach(tr=>{tr.style.display=((tr.dataset.name||'').includes(q)&&(!s||tr.dataset.st===s))?'':'none';});}
+
+async 
+async async function loadMonthly(){
+  const month=document.getElementById('fmonth').value||curM();
+  st('mlbl',month+' '+t('hisobot'));
+
+  const [y,mo]=month.split('-').map(Number);
+  const today=tzNow();
+  const isCurrentMonth = y===today.getFullYear() && mo===(today.getMonth()+1);
+  const lastDay = isCurrentMonth ? today.getDate() : new Date(y,mo,0).getDate();
+
+  let wd=0;
+  for(let d=1; d<=lastDay; d++){
+    const ds=`${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    if(isWorkDay(ds))wd++;
+  }
+
+  const {data:emps} = await sb.from('employees').select('*').order('name');
+  const {data:recs} = await sb.from('attendance').select('*').gte('work_date',`${month}-01`).lte('work_date',`${month}-${String(lastDay).padStart(2,'0')}`);
+  const {data:bons} = await sb.from('kpi_bonuses').select('*').eq('month',month);
+
+  if(!emps)return;
+  monthlyData=[];
+  const tbody=document.getElementById('mbody');
+  tbody.innerHTML='';
+
+  let totalFull=0,totalHalf=0,totalSec=0,totalKpi=0;
+
+  emps.forEach((emp,i)=>{
+    const er=(recs||[]).filter(r=>r.employee_id===emp.id);
+    let late=0,came=0,sec=0,afkSec=0,fullDays=0,halfDays=0;
+
+    er.forEach(r=>{
+      const dayMode = r.day_mode || getDayModeByStart(r.start_time);
+      if(r.start_time){
+        const startMin = getMinsFromHHMM(r.start_time);
+        if(startMin > LATE_AFTER_MIN) late++;
+        came++;
+      }
+      if(r.end_time && getMinsFromHHMM(r.end_time) < 15*60){
+        halfDays++;
+      } else if(r.start_time){
+        if(dayMode==='half_day') halfDays++;
+        else fullDays++;
+      }
+      sec += r.work_seconds || 0;
+      afkSec += r.afk_seconds || 0;
+    });
+
+    const abs = Math.max(0, wd-came);
+    const bon = (bons||[]).find(b=>b.employee_id===emp.id)?.bonus || 0;
+    const afkOverMin = Math.max(0, Math.floor(afkSec/60)-30);
+    const penalty = late*10 + abs*20 + Math.min(afkOverMin,20);
+    const finalBall = Math.min(100, Math.max(0, 100-penalty+bon));
+    const kpi = calcKpi(finalBall, emp.kpi_type || 'senior');
+
+    totalFull += fullDays;
+    totalHalf += halfDays;
+    totalSec += sec;
+    totalKpi += kpi;
+
+    const hs=`${Math.floor(sec/3600)}h ${Math.floor((sec%3600)/60)}m`;
+    const afkTxt=`${Math.floor(afkSec/60)} ${t('daq')}`;
+
+    monthlyData.push({
+      name:emp.name,
+      hours:hs,
+      afk:afkTxt,
+      late,
+      abs,
+      penalty:-penalty,
+      bonus:bon,
+      ball:finalBall,
+      kpi,
+      fullDays,
+      halfDays
+    });
+
+    const tr=document.createElement('tr');
+    tr.innerHTML = `
+      <td>${i+1}</td>
+      <td>${emp.name||'-'}</td>
+      <td style="font-family:var(--mono)">${hs}</td>
+      <td>${afkTxt}</td>
+      <td>${late} ${t('marta')}</td>
+      <td>${abs} ${t('kun')}</td>
+      <td style="color:var(--danger)">-${penalty} ${t('ball')}</td>
+      <td style="color:var(--success)">+${bon} ${t('ball')}</td>
+      <td><strong style="font-family:var(--mono)">${finalBall} ${t('ball')}</strong></td>
+      <td style="color:var(--success);font-weight:700;font-family:var(--mono)">${kpi.toLocaleString()} UZS</td>
+      <td>${fullDays}</td>
+      <td>${halfDays}</td>
+      <td>
+        <div style="display:flex;gap:3px">
+          <button class="bsm bsm-g" onclick="adjKpi('${emp.id}','${month}',10)">+10</button>
+          <button class="bsm bsm-r" onclick="adjKpi('${emp.id}','${month}',-10)">-10</button>
+          <button class="bsm bsm-gr" onclick="adjKpi('${emp.id}','${month}',0,true)">${t('reset')}</button>
+        </div>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+
+  st('me',''+emps.length);
+  st('mk', totalKpi.toLocaleString()+' UZS');
+  st('md_full',''+totalFull);
+  st('md_half',''+totalHalf);
+  st('md_att', wd>0 ? Math.round(((totalFull+totalHalf)/Math.max(1, emps.length*wd))*100)+'%' : '0%');
+  st('md_hours', Math.floor(totalSec/3600)+'h '+Math.floor((totalSec%3600)/60)+'m');
+}
+
+function calcKpi(ball,type){if(type==='senior'){if(ball>=90)return 560000;if(ball>=80)return 420000;if(ball>=70)return 280000;return 0;}if(ball>=90)return 400000;if(ball>=80)return 300000;if(ball>=70)return 210000;return 0;}
+async function adjKpi(eid,month,delta,reset=false){const{data:ex}=await sb.from('kpi_bonuses').select('*').eq('employee_id',eid).eq('month',month).maybeSingle();if(reset){if(ex)await sb.from('kpi_bonuses').update({bonus:0}).eq('id',ex.id);else await sb.from('kpi_bonuses').insert({employee_id:eid,month,bonus:0});}else{const nv=(ex?ex.bonus:0)+delta;if(ex)await sb.from('kpi_bonuses').update({bonus:nv}).eq('id',ex.id);else await sb.from('kpi_bonuses').insert({employee_id:eid,month,bonus:delta});}loadMonthly();}
+
+async function loadEmpList() {
+  const { data: emps, error } = await sb
+    .from('employees')
+    .select('id,name,login,kpi_type,face_registered')
+    .eq('active', true)
+    .order('name');
+
+  if (error || !emps) {
+    toast('error', 'Xato', error?.message || 'Hodimlar yuklanmadi');
+    return;
+  }
+
+  const tbody = document.getElementById('emp_body');
+  tbody.innerHTML = '';
+
+  emps.forEach((emp, i) => {
+    const ka = emp.kpi_type === 'junior' ? '400 000' : '560 000';
+    const faceStatus = emp.face_registered
+      ? '<span style="color:var(--success);font-size:11px">✅ Ro\'yxatda</span>'
+      : '<span style="color:var(--text3);font-size:11px">❌ Yo\'q</span>';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td>${emp.name}</td>
+      <td style="font-family:var(--mono)">${emp.login}</td>
+      <td style="font-family:var(--mono)">*****</td>
+      <td>${faceStatus}</td>
+      <td style="font-family:var(--mono)">+${ka} UZS</td>
+      <td><button class="brd" onclick="delEmp('${emp.id}')">${t('delete')}</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+async function addEmp() {
+  const nm = document.getElementById('ne_n').value.trim();
+  const email = document.getElementById('ne_l').value.trim().toLowerCase();
+  const ps = document.getElementById('ne_p').value.trim();
+  const kp = document.getElementById('ne_k').value;
+
+  console.log('--- addEmp START ---');
+  console.log('FORM VALUES:', { nm, email, psLength: ps.length, kp });
+
+  if (!nm || !email || !ps) {
+    toast('warn', 'Xato', 'Hammasini to‘ldiring');
+    return;
+  }
+
+  try {
+    const { data: userData, error: userErr } = await sb.auth.getUser();
+    console.log('GET USER DATA:', userData);
+    console.log('GET USER ERROR:', userErr);
+
+    if (userErr || !userData?.user) {
+      toast('error', 'Xato', 'Auth sessiya yaroqsiz. Qayta login qiling.');
+      return;
+    }
+
+    const { data: sessData, error: sessErr } = await sb.auth.getSession();
+    console.log('GET SESSION RESULT:', sessData);
+    console.log('GET SESSION ERROR:', sessErr);
+
+    const token = sessData?.session?.access_token;
+    console.log('ACCESS TOKEN:', token);
+    console.log('ACCESS TOKEN EXISTS:', !!token);
+
+    if (!token) {
+      toast('error', 'Xato', 'Admin sessiyasi topilmadi');
+      return;
+    }
+
+    const payload = {
+      name: nm,
+      email,
+      password: ps,
+      kpi_type: kp
+    };
+
+    console.log('REQUEST PAYLOAD:', payload);
+
+    const res = await fetch('https://hdbhdddekjjjtwtyocfa.supabase.co/functions/v1/create-employee', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    console.log('HTTP STATUS:', res.status);
+    console.log('HTTP OK:', res.ok);
+
+    const raw = await res.text();
+    console.log('RAW RESPONSE:', raw);
+
+    let result = {};
+    try {
+      result = raw ? JSON.parse(raw) : {};
+    } catch {
+      result = { error: raw || 'Noma’lum xato' };
+    }
+
+    console.log('PARSED RESPONSE:', result);
+
+    if (!res.ok) {
+      toast('error', 'Xato', result.error || result.message || 'Hodim qo‘shilmadi');
+      return;
+    }
+
+    document.getElementById('ne_n').value = '';
+    document.getElementById('ne_l').value = '';
+    document.getElementById('ne_p').value = '';
+
+    await loadEmpList();
+    toast('success', 'Hodim', 'Qo‘shildi!');
+  } catch (e) {
+    console.error('addEmp CATCH ERROR:', e);
+    toast('error', 'Xato', e.message || 'Tizim xatoligi');
+  } finally {
+    console.log('--- addEmp END ---');
+  }
+}
+function addHol(){const d=document.getElementById('hol_d').value;if(!d)return;const h=JSON.parse(localStorage.getItem('aloqa_hols')||'[]');if(!h.includes(d))h.push(d);localStorage.setItem('aloqa_hols',JSON.stringify(h));document.getElementById('hol_d').value='';updateHolList();}
+function updateHolList(){const h=JSON.parse(localStorage.getItem('aloqa_hols')||'[]');const el=document.getElementById('hol_list');if(!el)return;el.textContent=h.length===0?t('hol_none'):'Dam olish: '+h.join(', ');}
+function openEP(id){document.getElementById('ep_id').value=id;document.getElementById('ep_np').value='';document.getElementById('m_ep').classList.remove('hidden');}
+function closeEP(){document.getElementById('m_ep').classList.add('hidden');}
+async function savePass() {
+  const id = document.getElementById('ep_id').value;
+  const np = document.getElementById('ep_np').value.trim();
+
+  if (!np) {
+    toast('warn', 'Parol', 'Yangi parol kiriting');
+    return;
+  }
+
+  try {
+    const { data: sessData, error: sessErr } = await sb.auth.getSession();
+    if (sessErr || !sessData?.session?.access_token) {
+      throw new Error('Admin sessiyasi topilmadi');
+    }
+
+    const token = sessData.session.access_token;
+
+    const res = await fetch('https://hdbhdddekjjjtwtyocfa.supabase.co/functions/v1/reset-employee-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        employee_id: id,
+        new_password: np
+      })
+    });
+
+    const raw = await res.text();
+    let result = {};
+    try {
+      result = raw ? JSON.parse(raw) : {};
+    } catch {
+      result = { error: raw || 'Noma’lum xato' };
+    }
+
+    if (!res.ok) {
+      throw new Error(result.error || 'Parol yangilanmadi');
+    }
+
+    document.getElementById('ep_np').value = '';
+    closeEP();
+    toast('success', 'Parol', 'Auth orqali yangilandi');
+  } catch (err) {
+    console.error('savePass error:', err);
+    toast('error', 'Xato', err.message || 'Parolni yangilab bo‘lmadi');
+  }
+}
+// ============================================================
+//  EXPORT
+// ============================================================
+function exportExcel(){
+  if(!monthlyData||monthlyData.length===0){toast('warn','Export','Avval oylik hisobotni yuklang');return;}
+  if(typeof XLSX==='undefined'){toast('warn','Export','Excel kutubxonasi hali yuklanmadi, kuting...');return;}
+  const month=document.getElementById('fmonth').value||curM();
+  const headers=['#','Ism familiya','Ishlagan soat','AFK vaqti','Kechikish','Kelmagan','Jarima','Qo\'shimcha','KPI ball','KPI sum (UZS)'];
+  const rows=monthlyData.map((d,i)=>[i+1,d.name,d.hours,d.afk,d.late,d.abs,d.penalty,'+'+d.bonus,d.ball,d.kpi]);
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  ws['!cols']=headers.map(()=>({wch:18}));
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,month+' Hisobot');
+  XLSX.writeFile(wb,'AloqaPro_'+month+'_KPI.xlsx');
+  toast('success','Excel','Yuklab olindi!');
+}
+function exportPDF(){
+  if(!monthlyData||monthlyData.length===0){toast('warn','Export','Avval oylik hisobotni yuklang');return;}
+  if(typeof window.jspdf==='undefined'){toast('warn','Export','PDF kutubxonasi hali yuklanmadi, kuting...');return;}
+  const month=document.getElementById('fmonth').value||curM();
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  doc.setFontSize(14);
+  doc.text('AloqaPro — KPI Hisobot: '+month,14,14);
+  doc.setFontSize(10);
+  doc.text('Sana: '+new Date().toLocaleDateString(),14,22);
+  const headers=[['#','Ism familiya','Ish soat','AFK','Kechikish','Kelmagan','Jarima','Bonus','Ball','KPI (UZS)']];
+  const rows=monthlyData.map((d,i)=>[i+1,d.name,d.hours,d.afk,d.late,d.abs,d.penalty,'+'+d.bonus,d.ball,d.kpi.toLocaleString()]);
+  doc.autoTable({head:headers,body:rows,startY:28,styles:{fontSize:9,cellPadding:2},headStyles:{fillColor:[74,140,245],textColor:[255,255,255],fontStyle:'bold'},alternateRowStyles:{fillColor:[245,248,252]},margin:{left:14,right:14}});
+  doc.save('AloqaPro_'+month+'_KPI.pdf');
+  toast('success','PDF','Yuklab olindi!');
+}
+
+// ============================================================
+//  EMPLOYEE STATE
+// ============================================================
+let afkCurSec = 0;
+let afkIv = null;
+let afkWarnShown = false;
+function todayBreakSec(){return breakSeconds;}
+
+function getLS(){return JSON.parse(localStorage.getItem('aloqa_emp_state')||'null');}
+
+async function pushCheckpoint(eventType, extra={}){
+  try{
+    if(!CU) return false;
+    const payload={employee_id:CU.id,work_date:todayISO(),event_type:eventType,event_time:fmtHM(tzNow())+':00',meta:extra};
+    const res=await sb.from('attendance_events').insert(payload);
+    if(res?.error){
+      console.warn('attendance_events:', res.error.message);
+      return false;
+    }
+    return true;
+  }catch(e){
+    console.warn('pushCheckpoint:', e.message);
+    return false;
+  }
+}
+
+async function upsertAttendanceRow(fullPayload, legacyPayload){
+  try{
+    const today = fullPayload.work_date;
+    const {data:ex, error:selErr} = await sb.from('attendance').select('id').eq('employee_id',fullPayload.employee_id).eq('work_date',today).maybeSingle();
+    if(selErr){
+      console.warn('attendance select error:', selErr.message);
+      return false;
+    }
+
+    let res = ex
+      ? await sb.from('attendance').update(fullPayload).eq('id', ex.id)
+      : await sb.from('attendance').insert(fullPayload);
+
+    if(!res?.error) return true;
+
+    console.warn('attendance full payload error:', res.error.message);
+
+    res = ex
+      ? await sb.from('attendance').update(legacyPayload).eq('id', ex.id)
+      : await sb.from('attendance').insert(legacyPayload);
+
+    if(!res?.error) return true;
+
+    console.warn('attendance legacy payload error:', res.error.message);
+    return false;
+  }catch(e){
+    console.warn('upsertAttendanceRow:', e.message);
+    return false;
+  }
+}
+
+function saveLS(){
+  const ss=getLS()||{};
+  const data={date:todayISO(),state:empState,wAccum,lAccum,prayerAccum,afkSeconds,afkCount,breakSeconds,wStartISO:wStart?wStart.toISOString():null,lStartISO:lStart?lStart.toISOString():null,prayerStartISO:prayerStart?prayerStart.toISOString():null,afkStartISO:currentAfkStart?currentAfkStart.toISOString():null,i_s:document.getElementById('i_s')?.textContent||'-',i_e:document.getElementById('i_e')?.textContent||'-',i_ls:document.getElementById('i_ls')?.textContent||'-',i_le:document.getElementById('i_le')?.textContent||'-',lateMin:ss.lateMin||0,dayMode:ss.dayMode||'full_day',autoEndDone:autoEndDone||false};
+  localStorage.setItem('aloqa_emp_state',JSON.stringify(data));
+}
+function restoreLS(){
+  const ss=getLS();
+  if(!ss||ss.date!==todayISO()){localStorage.removeItem('aloqa_emp_state');updateEmpBtns();return false;}
+  empState=ss.state||'not_started';wAccum=ss.wAccum||0;lAccum=ss.lAccum||0;prayerAccum=ss.prayerAccum||0;afkSeconds=ss.afkSeconds||0;afkCount=ss.afkCount||0;breakSeconds=ss.breakSeconds||0;autoEndDone=ss.autoEndDone||false;
+  if(ss.wStartISO)wStart=new Date(ss.wStartISO);
+  if(ss.lStartISO)lStart=new Date(ss.lStartISO);
+  if(ss.prayerStartISO)prayerStart=new Date(ss.prayerStartISO);
+  if(ss.prayerStartISO)prayerStart=new Date(ss.prayerStartISO);
+  if(ss.afkStartISO){currentAfkStart=new Date(ss.afkStartISO);isAfk=true;const elapsed=Math.floor((tzNow()-currentAfkStart)/1000);if(elapsed>0){afkSeconds+=elapsed;breakSeconds+=elapsed;}currentAfkStart=null;isAfk=false;}
+  st('i_s',ss.i_s||'-');st('i_e',ss.i_e||'-');st('i_ls',ss.i_ls||'-');st('i_le',ss.i_le||'-');
+  const lt=document.getElementById('e_ltag');if(lt&&ss.lateMin!==undefined)lt.textContent=t('lt_pre')+' '+ss.lateMin+' '+t('lt_u');
+  setTV(wAccum,'tw');setTV(lAccum,'tl');updateAfkDisplay();updateBreakBar();updateEmpBtns();updateEmpStatusTag();
+  if(empState==='working')startWT();
+  if(empState==='lunch')startLT();
+  return true;
+}
+
+// ============================================================
+//  EMPLOYEE INIT
+// ============================================================
+function initEmp(){
+  restoreLS();setEmpMonth();loadHist();updateDates();
+  document.getElementById('m_welcome').classList.remove('hidden');
+  const mt=document.getElementById('e_mtag');if(mt)mt.textContent=curM();
+  startFaceDetection();startAutoEndCheck();
+  if(Notification.permission==='granted')scheduleReminders();
+  loadNotificationsEmp();
+  empNavTab('work');
+}
+function closeWelcome(){document.getElementById('m_welcome').classList.add('hidden');}
+
+// ============================================================
+//  EMPLOYEE ACTIONS
+// ============================================================
+async function empStart(){
+  if(empState!=='not_started')return;
+  wStart=tzNow();empState='working';
+  st('i_s',fmtHM(wStart));
+  const nowMin=wStart.getHours()*60+wStart.getMinutes();
+  const lm=Math.max(0,nowMin-LATE_AFTER_MIN);
+  const dayMode=nowMin>=HALF_DAY_AFTER_MIN?'half_day':'full_day';
+  const el=document.getElementById('e_ltag');if(el)el.textContent=t('lt_pre')+' '+lm+' '+t('lt_u');
+  const ss=getLS()||{};ss.lateMin=lm;ss.dayMode=dayMode;localStorage.setItem('aloqa_emp_state',JSON.stringify(ss));
+  updateEmpBtns();updateEmpStatusTag();startWT();saveLS();
+  await savePartial();
+  await pushCheckpoint('work_start',{late_minutes:lm,day_mode:dayMode});
+  toast('success',t('bs'),dayMode==='half_day' ? 'Ish yarim kun statusida boshlandi' : 'Ish vaqti boshlandi! Omad 💼');
+}
+async function empLunch(){
+  if(empState==='lunch'){empBackLunch();return;}
+  if(empState!=='working')return;
+  lStart=tzNow();if(wStart)wAccum+=Math.floor((lStart-wStart)/1000);wStart=null;
+  empState='lunch';st('i_ls',fmtHM(lStart));stopWT();updateEmpBtns();updateEmpStatusTag();startLT();saveLS();
+  await savePartial();
+  await pushCheckpoint('lunch_start',{});
+  toast('info','Tushlik','Yaxshi dam oling! 🍽️');
+}
+async function empBackLunch(){
+  if(empState!=='lunch')return;
+  const now=tzNow();if(lStart)lAccum+=Math.floor((now-lStart)/1000);lStart=null;
+  st('i_le',fmtHM(now));empState='working';wStart=now;stopLT();updateEmpBtns();updateEmpStatusTag();startWT();saveLS();
+  await savePartial();
+  await pushCheckpoint('lunch_end',{});
+  toast('success','Tushlik','Ish davom etadi 💼');
+}
+async function empPrayer(){
+  const bp=document.getElementById('bp');
+  if(empState==='prayer'){
+    const now=tzNow();
+    if(prayerStart) prayerAccum += Math.floor((now-prayerStart)/1000);
+    prayerStart=null;
+    empState='working';
+    wStart=now;
+    updateEmpBtns();updateEmpStatusTag();startWT();saveLS();
+    await savePartial();
+    await pushCheckpoint('prayer_end',{});
+    toast('success',t('st_prayer'),'Ish davom etadi');
+    return;
+  }
+  if(empState!=='working') return;
+  prayerStart=tzNow();
+  if(wStart) wAccum += Math.floor((prayerStart-wStart)/1000);
+  wStart=null;
+  empState='prayer';
+  updateEmpBtns();updateEmpStatusTag();stopWT();saveLS();
+  await savePartial();
+  await pushCheckpoint('prayer_start',{});
+  toast('info',t('st_prayer'),'Namoz vaqti boshlandi');
+}
+function empContinue(){if(empState!=='paused')return;empState='working';wStart=tzNow();document.getElementById('bc').classList.add('hidden');updateEmpBtns();updateEmpStatusTag();startWT();saveLS();}
+async function empEnd(auto=false){
+  if(!['working','lunch','paused','prayer'].includes(empState))return;
+  const now=tzNow();
+  if(empState==='working'&&wStart)wAccum+=Math.floor((now-wStart)/1000);
+  if(empState==='lunch'&&lStart)lAccum+=Math.floor((now-lStart)/1000);
+  if(empState==='prayer'&&prayerStart)prayerAccum+=Math.floor((now-prayerStart)/1000);
+  wStart=null;lStart=null;prayerStart=null;empState='ended';st('i_e',fmtHM(now));
+  stopWT();stopLT();document.getElementById('bc').classList.add('hidden');
+  setTV(wAccum,'tw');setTV(lAccum,'tl');updateEmpBtns();updateEmpStatusTag();stopFaceDetection();
+  if(auto){autoEndDone=true;document.getElementById('m_auto_end').classList.remove('hidden');document.getElementById('autoEndBanner').style.display='block';setTimeout(()=>document.getElementById('autoEndBanner').style.display='none',5000);}
+  else toast('success','Yakunlandi','Yaxshi ish kuni! 🎉');
+  saveLS();await saveAtt(auto);
+}
+async function saveAtt(autoEnded=false){
+  if(!CU)return;
+  const today=todayISO();
+  const ss=getLS()||{};
+  const lm=ss.lateMin||0;
+  const dayMode=(ss.dayMode||getDayModeByStart(ss.i_s));
+
+  const fullPayload={
+    employee_id:CU.id,
+    work_date:today,
+    start_time:ss.i_s&&ss.i_s!=='-'?ss.i_s+':00':null,
+    end_time:ss.i_e&&ss.i_e!=='-'?ss.i_e+':00':null,
+    lunch_start:ss.i_ls&&ss.i_ls!=='-'?ss.i_ls+':00':null,
+    lunch_end:ss.i_le&&ss.i_le!=='-'?ss.i_le+':00':null,
+    prayer_seconds:prayerAccum||0,
+    work_seconds:wAccum,
+    lunch_seconds:lAccum,
+    afk_seconds:afkSeconds,
+    afk_count:afkCount,
+    late_minutes:lm,
+    status:lm>0?'kechikkan':'keldi',
+    auto_ended:autoEnded,
+    day_mode:dayMode,
+    is_half_day:dayMode==='half_day',
+    is_full_day:dayMode!=='half_day'
+  };
+
+  const legacyPayload={
+    employee_id:CU.id,
+    work_date:today,
+    start_time:ss.i_s&&ss.i_s!=='-'?ss.i_s+':00':null,
+    end_time:ss.i_e&&ss.i_e!=='-'?ss.i_e+':00':null,
+    lunch_start:ss.i_ls&&ss.i_ls!=='-'?ss.i_ls+':00':null,
+    lunch_end:ss.i_le&&ss.i_le!=='-'?ss.i_le+':00':null,
+    work_seconds:wAccum,
+    lunch_seconds:lAccum,
+    afk_seconds:afkSeconds,
+    afk_count:afkCount,
+    late_minutes:lm,
+    status:lm>0?'kechikkan':'keldi',
+    auto_ended:autoEnded
+  };
+
+  await upsertAttendanceRow(fullPayload, legacyPayload);
+  loadHist();
+}
+async function savePartial(){
+  if(!CU||empState==='not_started')return;
+  const today=todayISO();
+  const ss=getLS()||{};
+  const lm=ss.lateMin||0;
+  const dayMode=(ss.dayMode||getDayModeByStart(ss.i_s));
+
+  let cw=wAccum;
+  if(empState==='working'&&wStart)cw+=Math.floor((tzNow()-wStart)/1000);
+
+  let cl=lAccum;
+  if(empState==='lunch'&&lStart)cl+=Math.floor((tzNow()-lStart)/1000);
+
+  let afkNow=afkSeconds;
+  if(isAfk&&currentAfkStart)afkNow+=Math.floor((tzNow()-currentAfkStart)/1000);
+
+  const fullPayload={
+    employee_id:CU.id,
+    work_date:today,
+    start_time:ss.i_s&&ss.i_s!=='-'?ss.i_s+':00':null,
+    work_seconds:cw,
+    lunch_seconds:cl,
+    prayer_seconds:prayerAccum||0,
+    afk_seconds:afkNow,
+    afk_count:afkCount,
+    late_minutes:lm,
+    status:lm>0?'kechikkan':'keldi',
+    auto_ended:false,
+    day_mode:dayMode,
+    is_half_day:dayMode==='half_day',
+    is_full_day:dayMode!=='half_day'
+  };
+
+  const legacyPayload={
+    employee_id:CU.id,
+    work_date:today,
+    start_time:ss.i_s&&ss.i_s!=='-'?ss.i_s+':00':null,
+    work_seconds:cw,
+    lunch_seconds:cl,
+    afk_seconds:afkNow,
+    afk_count:afkCount,
+    late_minutes:lm,
+    status:lm>0?'kechikkan':'keldi',
+    auto_ended:false
+  };
+
+  await upsertAttendanceRow(fullPayload, legacyPayload);
+}
+
+// ============================================================
+//  TIMERS
+// ============================================================
+function startWT(){
+  stopWT();let cnt=0;
+  wIv=setInterval(()=>{
+    let tot=wAccum;if(wStart)tot+=Math.floor((tzNow()-wStart)/1000);setTV(tot,'tw');
+    cnt++;if(cnt%30===0){saveLS();savePartial();}
+  },1000);
+}
+function stopWT(){if(wIv){clearInterval(wIv);wIv=null;}}
+function startLT(){
+  stopLT();
+  lIv=setInterval(()=>{let tot=lAccum;if(lStart)tot+=Math.floor((tzNow()-lStart)/1000);setTV(tot,'tl');updateBreakBar();},1000);
+}
+function stopLT(){if(lIv){clearInterval(lIv);lIv=null;}}
+function setTV(sec,id){const e=document.getElementById(id);if(e)e.textContent=fmtSec(sec);}
+function stopAll(){stopWT();stopLT();}
+
+function updateBreakBar(){
+  const bar=document.getElementById('breakBar');const used=document.getElementById('breakUsed');
+  const total=breakSeconds+(lStart?Math.floor((tzNow()-lStart)/1000):0);
+  const pct=Math.min(100,(total/BREAK_LIMIT_SEC)*100);
+  if(bar){bar.style.width=pct+'%';bar.classList.toggle('over',total>BREAK_LIMIT_SEC);}
+  if(used)used.textContent=Math.floor(total/60)+' '+t('daq');
+}
+
+// ============================================================
+//  AUTO-END
+// ============================================================
+function startAutoEndCheck(){
+  if(autoEndIv)clearInterval(autoEndIv);
+  autoEndIv=setInterval(()=>{
+    if(autoEndDone)return;
+    if(!['working','lunch','paused'].includes(empState))return;
+    const now=tzNow();if(now.getHours()===AUTO_END_HOUR&&now.getMinutes()>=AUTO_END_MIN)empEnd(true);
+  },30000);
+  const now=tzNow();
+  if(!autoEndDone&&['working','lunch','paused'].includes(empState)&&now.getHours()===AUTO_END_HOUR&&now.getMinutes()>=AUTO_END_MIN)empEnd(true);
+}
+
+// ============================================================
+//  FACE DETECTION — TO'LIQ QAYTA YOZILGAN
+//
+//  TUZATISHLAR:
+//  ✅ FIX 1: isDetecting 10 sek stuck bo'lsa auto-reset
+//  ✅ FIX 2: Video paused bo'lsa play() chaqirib davom etadi (skip qilmaydi)
+//  ✅ FIX 3: Tab qaytganda faceHitCount reset, video play() chaqiriladi
+//  ✅ FIX 4: STABLE_HIT_REQUIRED=3 (eski 5 edi — paused videoda hech to'planmaydi)
+//  ✅ FIX 5: Banner faqat STABIL detection dan keyin yashiriladi
+// ============================================================
+let faceStream      = null;
+let afkCurIv        = null;
+let afkCountdownIv  = null;
+let afkCountdownSec = AFK_GRACE_SEC;
+let lastFaceBox     = null;
+let livenessScore   = 0;
+// ✅ FIX 1: isDetecting stuck bo'lsa aniqlash uchun timestamp
+function toggleFaceWidget(){
+  const fw = document.getElementById('faceWidget');
+  if(!fw) return;
+  const wrap = fw.querySelector('.fw-video-wrap');
+  const timer = document.getElementById('afkTimer');
+  const total = document.getElementById('afkTotalWidget');
+  const live = document.getElementById('livenessWidget');
+  const zoom = fw.querySelector('.fw-zoom');
+  const btn = fw.querySelector('.fw-minimize');
+  faceWidgetMin = !faceWidgetMin;
+  if(faceWidgetMin){
+    if(wrap) wrap.style.display='none';
+    if(timer) timer.style.display='none';
+    if(total) total.style.display='none';
+    if(live) live.style.display='none';
+    if(zoom) zoom.style.display='none';
+    fw.style.width='140px';
+    if(btn) btn.textContent='+';
+  }else{
+    if(wrap) wrap.style.display='';
+    if(timer) timer.style.display='';
+    if(total) total.style.display='';
+    if(live) live.style.display='';
+    if(zoom) zoom.style.display='flex';
+    fw.style.width='';
+    if(btn) btn.textContent='—';
+  }
+}
+
+// ── MODEL LOADING ──────────────────────────────────────────
+async function loadFaceModels(){
+  if(faceApiLoaded)return true;
+
+  for(let i=0;i<40;i++){
+    if(typeof faceapi!=='undefined')break;
+    await new Promise(r=>setTimeout(r,500));
+  }
+
+  if(typeof faceapi==='undefined'){
+    console.error('faceapi undefined');
+    return false;
+  }
+
+  // 🔴 MUHIM FIX
+  try {
+    await faceapi.tf.setBackend('cpu');
+    await faceapi.tf.ready();
+    console.log("Backend:", faceapi.tf.getBackend());
+  } catch(e){
+    console.warn("Backend set error", e);
+  }
+
+  const URLS = ['./model'];
+
+for (const url of URLS) {
+  try {
+    console.log('Loading models from:', url);
+
+    await faceapi.nets.tinyFaceDetector.loadFromUri(url);
+    await faceapi.nets.faceLandmark68TinyNet.loadFromUri(url);
+    await faceapi.nets.faceRecognitionNet.loadFromUri(url);
+
+    faceApiLoaded = true;
+    console.log('FACE API LOADED FROM:', url);
+    return true;
+
+  } catch (e) {
+    console.error('MODEL LOAD FAILED:', url, e);
+  }
+}
+
+  return false;
+}
+// ── START CAMERA ───────────────────────────────────────────
+async function startCamera(){
+  if(faceStream){
+    // ✅ FIX: Stream mavjud bo'lsa ham video paused bo'lishi mumkin — tekshir
+    const video=document.getElementById('faceVideo');
+    if(video&&video.srcObject===faceStream){
+      if(video.paused){try{await video.play();}catch(e){}}
+      return true;
+    }
+  }
+  try{
+    faceStream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:320},height:{ideal:240},facingMode:'user'},audio:false});
+    const video=document.getElementById('faceVideo');
+    video.srcObject=faceStream;
+    await new Promise((resolve,reject)=>{
+      video.onloadedmetadata=()=>resolve();
+      video.onerror=reject;
+      setTimeout(resolve,3000);
+    });
+    try{await video.play();}catch(e){}
+    const canvas=document.getElementById('faceCanvas');
+    canvas.width=video.videoWidth||320;
+    canvas.height=video.videoHeight||240;
+    return true;
+  }catch(e){
+    console.error('Camera error:',e.message);
+    return false;
+  }
+}
+
+// ── MAIN ENTRY ─────────────────────────────────────────────
+async function startFaceDetection(){
+  if(empState==='ended')return;
+  const statusEl=document.getElementById('face_status_inline');
+  const setStatus=(txt)=>{if(statusEl)statusEl.textContent=txt;};
+  setStatus('⏳ Yuklanmoqda...');
+  setFaceDot('yellow','Yuklanmoqda...');
+  const modelsOk=await loadFaceModels();
+  if(!modelsOk){setStatus('⚠️ Model yuklanmadi');setFaceDot('gray','Model xatosi');toast('error','Face','Model yuklanmadi');return;}
+  const camOk=await startCamera();
+  if(!camOk){setStatus('⚠️ Kamera ruxsati yoq');setFaceDot('gray','Kamera yoq');const frb=document.getElementById('faceRegBox');if(frb)frb.style.display='none';return;}
+  await loadMyFaceProfile();
+  if(myFaceDescriptor){setStatus('✅ Yuz nazorati tayyor ('+t('face_check_every')+')');setFaceDot('green','Tayyor');}
+  else{setStatus('📸 Yuzni royxatdan otkazing');setFaceDot('yellow','Royxat kerak');}
+  if(faceCheckIv){clearInterval(faceCheckIv);faceCheckIv=null;}
+  // ✅ FIX 3: Yangi detection siklida counterlarni reset qil
+  faceMissCount=0;faceHitCount=0;isDetecting=false;isDetectingStartTime=0;
+  faceCheckIv=setInterval(runFaceCheck,FACE_CHECK_INTERVAL);
+}
+
+// ── FACE CHECK — TO'LIQ QAYTA YOZILGAN ────────────────────
+async function runFaceCheck(){
+  if(empState==='lunch'||empState==='not_started'||empState==='ended')return;
+
+  if(isDetecting){
+    if(isDetectingStartTime>0 && Date.now()-isDetectingStartTime > 15000){
+      isDetecting=false;
+      isDetectingStartTime=0;
+    } else {
+      return;
+    }
+  }
+
+  if(!faceApiLoaded)return;
+  const video=document.getElementById('faceVideo');
+  if(!video)return;
+
+  if(video.readyState < 2){
+    try{ await video.play(); }catch(e){}
+    return;
+  }
+  if(video.paused || video.ended){
+    try{ await video.play(); await new Promise(r=>setTimeout(r,300)); }catch(e){ return; }
+    if(video.readyState < 2) return;
+  }
+
+  isDetecting=true;
+  isDetectingStartTime=Date.now();
+
+  try{
+    const opts=new faceapi.TinyFaceDetectorOptions({inputSize:128,scoreThreshold:0.35});
+    const det=await faceapi.detectSingleFace(video,opts).withFaceLandmarks(true).withFaceDescriptor();
+
+    if(det && det.detection && det.detection.box && det.detection.box._width > 0 && det.detection.box._x !== null){
+      const box = det.detection.box;
+      let reason = 'unknown_face';
+      let dist = null;
+
+      if (
+        myFaceDescriptor &&
+        (Array.isArray(myFaceDescriptor) || myFaceDescriptor instanceof Float32Array) &&
+        myFaceDescriptor.length &&
+        det?.descriptor?.length
+      ) {
+        try {
+          dist = faceapi.euclideanDistance(
+            Array.from(det.descriptor),
+            Array.from(myFaceDescriptor)
+          );
+          console.log('FACE DIST:', dist, 'employee:', CU?.name);
+
+          if(dist <= FACE_MATCH_THRESHOLD) reason = 'match';
+          else if(dist <= FACE_SOFT_THRESHOLD) reason = 'soft_match';
+          else reason = 'unknown_face';
+        } catch (e) {
+          console.warn('distance error:', e.message);
+          reason = 'unknown_face';
+        }
+      }
+
+      if(reason==='match'){
+        faceHitCount++;
+        faceMissCount=0;
+        drawFaceBox(box,true);
+        updateLiveness(box);
+        if(faceHitCount >= STABLE_HIT_REQUIRED){
+          onFaceStablyDetected(reason);
+        } else {
+          const statusEl=document.getElementById('face_status_inline');
+          if(statusEl)statusEl.textContent=`🔄 Tasdiqlanyapdi... (${faceHitCount}/${STABLE_HIT_REQUIRED})`;
+          setFaceDot('yellow',`Tasdiqlanyapdi ${faceHitCount}/${STABLE_HIT_REQUIRED}`);
+        }
+        return;
+      }
+
+      // yuz ko'rinib turibdi, lekin burilgan yoki descriptor zaif -> AFK hisoblamaymiz
+      if(reason==='soft_match' || reason==='unknown_face'){
+        faceHitCount=0;
+        drawFaceBox(box,true);
+        updateLiveness(box);
+        const statusEl=document.getElementById('face_status_inline');
+        if(statusEl){
+          statusEl.textContent = reason==='soft_match'
+            ? `⚠️ Yuz burilgan bo'lishi mumkin ${dist!==null ? `| dist: ${dist.toFixed(3)}` : ''}`
+            : `⚠️ Yuz ko'rindi, tekshiruv zaif ${dist!==null ? `| dist: ${dist.toFixed(3)}` : ''}`;
+        }
+        setFaceDot('yellow', reason==='soft_match' ? 'Yuz burilgan, kuzatilmoqda' : 'Yuz ko‘rindi, tasdiq zaif');
+        document.getElementById('afkBanner').style.display='none';
+        if(isAfk)endAfkSession();
+        return;
+      }
+    }
+
+    // Umuman yuz ko'rinmadi
+    faceHitCount=0;
+    faceMissCount++;
+    clearFaceBox();
+    onFaceMissed();
+  } catch (e) {
+    console.warn('runFaceCheck error:', e.message);
+  } finally {
+    isDetecting=false;
+    isDetectingStartTime=0;
+  }
+}
+
+// ── onFaceMissed ───────────────────────────────────────────
+function onFaceMissed(){
+  const statusEl=document.getElementById('face_status_inline');
+  const hasProfile = !!(myFaceDescriptor && myFaceDescriptor.length);
+  const missingSec = faceMissCount * Math.max(1, Math.floor(FACE_CHECK_INTERVAL/1000));
+
+  if(statusEl)statusEl.textContent = hasProfile
+    ? "⚠️ Yuz ro'yxatdan o'tgan, lekin hozir aniqlanmadi"
+    : "❌ Yuz ro'yxatdan o'tmagan";
+  setFaceDot('red', hasProfile ? "Yuz aniqlanmadi" : "Ro'yxatdan o'tmagan");
+
+  if(empState!=='working')return;
+  document.getElementById('afkBanner').style.display='block';
+
+  if(missingSec>=Math.floor(AFK_GRACE_SEC*0.5)&&!afkWarnShown){
+    afkWarnShown=true;
+    document.getElementById('m_afk_warn').classList.remove('hidden');
+    startAfkCountdown();
+  }
+
+  if(!isAfk && missingSec>=AFK_GRACE_SEC){
+    startAfkSession();
+  }
+}
+
+// ── AFK SESSION ────────────────────────────────────────────
+function startAfkSession(){
+  if(isAfk)return;
+  isAfk=true;
+  currentAfkStart=tzNow();
+  afkCount++;
+  afkCurSec=0;
+  if(afkCurIv)clearInterval(afkCurIv);
+  afkCurIv=setInterval(()=>{
+    if(!isAfk){clearInterval(afkCurIv);afkCurIv=null;return;}
+    afkCurSec++;
+    afkSeconds++;
+    breakSeconds++;
+    updateAfkDisplay();
+    updateBreakBar();
+    saveLS();
+    const tv=document.getElementById('afkTimerVal');if(tv)tv.textContent=fmtSecMM(afkCurSec);
+    const atw=document.getElementById('afkTotalWidget');if(atw)atw.textContent='Jami AFK: '+Math.floor(afkSeconds/60)+' daq';
+    document.getElementById('afkTimer').classList.remove('hidden');
+  },1000);
+}
+
+function endAfkSession(){
+  if(!isAfk)return;
+  isAfk=false;
+  currentAfkStart=null;
+  if(afkCurIv){clearInterval(afkCurIv);afkCurIv=null;}
+  document.getElementById('afkTimer').classList.add('hidden');
+  setFaceDot('green',t('face_detected'));
+  afkCurSec=0;
+}
+
+function startAfkCountdown(){
+  afkCountdownSec=AFK_GRACE_SEC;
+  if(afkCountdownIv)clearInterval(afkCountdownIv);
+  afkCountdownIv=setInterval(()=>{
+    afkCountdownSec--;
+    const cd=document.getElementById('afk_countdown');if(cd)cd.textContent=fmtSecMM(afkCountdownSec);
+    if(afkCountdownSec<=0){clearInterval(afkCountdownIv);afkCountdownIv=null;document.getElementById('m_afk_warn').classList.add('hidden');afkWarnShown=false;}
+  },1000);
+}
+
+function dismissAfkWarn(){
+  document.getElementById('m_afk_warn').classList.add('hidden');
+  if(afkCountdownIv){clearInterval(afkCountdownIv);afkCountdownIv=null;}
+  afkWarnShown=false;
+  // ✅ MUHIM: faceMissCount reset qilinmaydi!
+  // Yuz haqiqatan aniqlanganida (STABLE_HIT_REQUIRED marta ketma-ket)
+  // onFaceStablyDetected() AFK ni tozalaydi
+}
+
+// ── FACE REGISTRATION ──────────────────────────────────────
+function startFaceRegistration(){
+  if(regCapturing)return;
+  if(!faceApiLoaded){toast('warn','Face','Model hali yuklanmadi, kuting...');return;}
+  regCapturing=true;regSamples=[];updateSampleDots();
+  const btn=document.getElementById('faceRegBtn');if(btn)btn.textContent='📸 0/5 tushirilmoqda...';
+  captureNextSample();
+}
+
+async function captureNextSample(){
+  if(!regCapturing)return;
+
+  const video=document.getElementById('faceVideo');
+  if(!video||video.readyState<2){
+    toast('warn','Face','Kamera tayyor emas');
+    regCapturing=false;
+    return;
+  }
+
+  try{
+    const opts=new faceapi.TinyFaceDetectorOptions({inputSize:320,scoreThreshold:0.5});
+    const det=await faceapi.detectSingleFace(video,opts).withFaceLandmarks(true).withFaceDescriptor();
+
+    const box = det?.detection?.box;
+const descriptor = det?.descriptor;
+if(box && descriptor && box._width > 0 && box._x !== null && box._y !== null){
+
+      const area = (box.width * box.height) / (video.videoWidth * video.videoHeight);
+
+      if(area < 0.015){
+        updateQuality('Kameraga yaqinroq turing...');
+        setTimeout(captureNextSample,700);
+        return;
+      }
+
+      regSamples.push(Array.from(descriptor));
+      updateSampleDots();
+      updateQuality(regSamples.length+'/5 ✅');
+
+      const btn=document.getElementById('faceRegBtn');
+      if(btn)btn.textContent='📸 '+regSamples.length+'/5...';
+
+      if(regSamples.length>=5){
+        await saveFaceProfile();
+        regCapturing=false;
+        return;
+      }
+
+      setTimeout(captureNextSample,600);
+
+    } else {
+      updateQuality('Yuz aniqlanmadi — togri qarang');
+      setTimeout(captureNextSample,800);
+    }
+
+  }catch(e){
+    console.warn('captureNextSample error:',e.message);
+    regCapturing=false;
+  }
+}
+  
+function updateSampleDots(){
+  const c=document.getElementById('faceSamples');if(!c)return;
+  c.innerHTML='';
+  for(let i=0;i<5;i++){const d=document.createElement('div');d.className='face-sample-dot'+(i<regSamples.length?' done':'');d.textContent=i<regSamples.length?'✅':'📷';c.appendChild(d);}
+}
+function updateQuality(txt){const el=document.getElementById('faceQuality');if(el)el.textContent=txt;}
+
+async function saveFaceProfile(){
+  if(!CU||regSamples.length===0)return;
+  const avg=new Float32Array(128);
+  regSamples.forEach(d=>d.forEach((v,i)=>avg[i]+=v));
+  avg.forEach((v,i)=>avg[i]=v/regSamples.length);
+  const descriptor=Array.from(avg);
+
+  try{
+    const { error: faceErr } = await sb.from('face_profiles').upsert(
+      {employee_id:CU.id, descriptor},
+      {onConflict:'employee_id'}
+    );
+    if(faceErr) throw faceErr;
+
+    const { error: empErr } = await sb.from('employees').update({face_registered:true}).eq('id',CU.id);
+    if(empErr) throw empErr;
+
+    myFaceDescriptor=avg;
+
+    const frb=document.getElementById('faceRegBox');
+    if(frb)frb.style.display='none';
+
+    toast('success','Yuz',"Ro'yxatdan o'tdi! ✅");
+    setFaceDot('green',"✅ Ro'yxatdan o'tdi");
+
+    const btn=document.getElementById('faceRegBtn');
+    if(btn){btn.textContent="✅ Ro'yxatdan o'tdi";btn.disabled=true;}
+
+    const q=document.getElementById('faceQuality');
+    if(q)q.textContent='5/5 ✅';
+
+    const statusEl=document.getElementById('face_status_inline');
+    if(statusEl)statusEl.textContent="✅ Yuz ro'yxatdan o'tgan. Tekshiruv kutilmoqda...";
+
+    faceHitCount=0;
+    faceMissCount=0;
+
+    await loadMyFaceProfile();
+    setTimeout(()=>startFaceDetection(),500);
+  }catch(e){
+    console.error('saveFaceReg xato:', e);
+    console.error('xato message:', e.message);
+    toast('error','Yuz',e.message||"Face profile saqlanmadi");
+    regCapturing=false;
+  }
+}
+async function loadMyFaceProfile(){
+  if(!CU)return;
+  try{
+    const {data,error} = await sb.from('face_profiles').select('descriptor').eq('employee_id',CU.id).maybeSingle();
+    if(error) throw error;
+
+    if(data&&data.descriptor){
+      myFaceDescriptor=new Float32Array(data.descriptor);
+
+      const frb=document.getElementById('faceRegBox');
+      if(frb)frb.style.display='none';
+
+      const btn=document.getElementById('faceRegBtn');
+      if(btn){btn.textContent="✅ Ro'yxatdan o'tdi";btn.disabled=true;}
+
+      const statusEl=document.getElementById('face_status_inline');
+      if(statusEl)statusEl.textContent="✅ Yuz ro'yxatdan o'tgan. Tekshiruv kutilmoqda...";
+    }else{
+      myFaceDescriptor=null;
+
+      const frb=document.getElementById('faceRegBox');
+      if(frb)frb.style.display='block';
+
+      const statusEl=document.getElementById('face_status_inline');
+      if(statusEl)statusEl.textContent="❌ Yuz ro'yxatdan o'tmagan";
+    }
+  }catch(e){
+    console.warn('loadMyFaceProfile:',e.message);
+    myFaceDescriptor=null;
+
+    const statusEl=document.getElementById('face_status_inline');
+    if(statusEl)statusEl.textContent="❌ Face profile yuklanmadi";
+  }
+}
+
+function updateAfkDisplay(){
+  const d=document.getElementById('afk_display');if(d)d.textContent=fmtSec(afkSeconds);
+  const c=document.getElementById('afk_cnt_lbl');if(c)c.textContent=afkCount+' '+t('afk_cnt_lbl');
+  const ok=document.getElementById('afk_break_ok');if(ok)ok.classList.toggle('hidden',breakSeconds>0);
+}
+
+function setFaceDot(color,txt){
+  const dot=document.getElementById('faceDot');const ftxt=document.getElementById('faceTxt');
+  if(dot)dot.className='fw-dot '+color;if(ftxt)ftxt.textContent=txt;
+}
+
+function stopFaceDetection(){
+  if(faceCheckIv){clearInterval(faceCheckIv);faceCheckIv=null;}
+  if(afkCurIv){clearInterval(afkCurIv);afkCurIv=null;}
+  if(faceStream){faceStream.getTracks().forEach(t2=>t2.stop());faceStream=null;}
+  // ✅ Barcha flaglarni reset
+  isDetecting=false;
+  isDetectingStartTime=0;
+  isAfk=false;
+  currentAfkStart=null;
+  faceHitCount=0;
+  faceMissCount=0;
+  document.getElementById('afkBanner').style.display='none';
+}
+
+// ============================================================
+//  EMP UI HELPERS
+// ============================================================
+function updateEmpBtns(){
+  const bsE=document.getElementById('bs'),blE=document.getElementById('bl'),bpE=document.getElementById('bp'),beE=document.getElementById('be');
+  const dis=(b,d)=>{if(b)b.disabled=d;};
+  if(empState==='not_started'){
+    dis(bsE,false);dis(blE,true);dis(bpE,true);dis(beE,true);
+    if(blE){blE.textContent=t('bl');blE.onclick=empLunch;}
+    if(bpE){bpE.textContent=t('bp');bpE.onclick=empPrayer;}
+  } else if(empState==='working'){
+    dis(bsE,true);dis(blE,false);dis(bpE,false);dis(beE,false);
+    if(blE){blE.textContent=t('bl');blE.onclick=empLunch;}
+    if(bpE){bpE.textContent=t('bp');bpE.onclick=empPrayer;}
+  } else if(empState==='lunch'){
+    dis(bsE,true);dis(blE,false);dis(bpE,true);dis(beE,true);
+    if(blE){blE.textContent=t('bb');blE.onclick=empBackLunch;}
+    if(bpE){bpE.textContent=t('bp');bpE.onclick=empPrayer;}
+  } else if(empState==='prayer'){
+    dis(bsE,true);dis(blE,true);dis(bpE,false);dis(beE,true);
+    if(bpE){bpE.textContent=t('bbp');bpE.onclick=empPrayer;}
+  } else if(empState==='paused'||empState==='ended'){
+    dis(bsE,true);dis(blE,true);dis(bpE,true);dis(beE,true);
+  }
+}
+function updateEmpStatusTag(){
+  const ss=getLS()||{};
+  const dayMode=ss.dayMode||'full_day';
+  const workLabel = dayMode==='half_day' ? t('st_half') : t('st1');
+  const map={not_started:t('st0'),working:workLabel,lunch:t('st2'),prayer:t('st_prayer'),paused:'Pauza',ended:t('st4')};
+  const el=document.getElementById('e_stag');if(el)el.textContent=t('st_pre')+' '+(map[empState]||'');
+}
+function setEmpMonth(){document.getElementById('e_month').value=curM();loadHist();}
+
+async function loadHist(){
+  if(!CU)return;
+  const m=document.getElementById('e_month').value||curM();
+  const[y,mo]=m.split('-').map(Number);const now=tzNow();const dim=(y===now.getFullYear()&&mo===now.getMonth()+1)?now.getDate():new Date(y,mo,0).getDate();
+  const {data:recs} = await sb.from('attendance').select('*').eq('employee_id',CU.id).gte('work_date',`${m}-01`).lte('work_date',`${m}-${String(dim).padStart(2,'0')}`).order('work_date');
+  const {data:bonusRow} = await sb.from('kpi_bonuses').select('bonus').eq('employee_id',CU.id).eq('month',m).maybeSingle();
+
+  const tbody=document.getElementById('hbody');tbody.innerHTML='';
+  let lc=0,totalAfkSec=0,came=0;
+  const bonus = bonusRow?.bonus || 0;
+
+  if(!recs||recs.length===0){
+    tbody.innerHTML=`<tr><td colspan="11" style="text-align:center;color:var(--text3);padding:20px">${t('no_data')}</td></tr>`;
+    st('e_lc','0');
+    st('e_afk_total','0 '+t('daqiqa'));
+    st('e_kpi_ball','0 '+t('ball'));
+    st('e_kpi_sum','0 UZS');
+    st('e_kpi_bonus',(bonus>=0?'+':'')+bonus+' '+t('ball'));
+    st('e_kpi_plan', CU.kpi_type==='junior' ? t('level_jr') : t('level_sr'));
+    return;
+  }
+
+  recs.forEach((r,i)=>{
+    if(r.late_minutes>0)lc++;
+    if(r.start_time)came++;
+    totalAfkSec+=r.afk_seconds||0;
+    const wh=Math.floor((r.work_seconds||0)/3600),wm=Math.floor(((r.work_seconds||0)%3600)/60);
+    const lh=Math.floor((r.lunch_seconds||0)/3600),lm2=Math.floor(((r.lunch_seconds||0)%3600)/60);
+    const afkMin=Math.floor((r.afk_seconds||0)/60);
+    const afkOver=Math.max(0,afkMin-30);
+    const rowDayMode=(r.day_mode || getDayModeByStart(r.start_time));
+    let bdg='';
+    if(r.status==='keldi')bdg=`<span class="badge bg">${t('b_came')}</span>`;
+    else if(r.status==='kechikkan')bdg=`<span class="badge by">${t('b_late')}</span>`;
+    else bdg=`<span class="badge br">${t('b_abs')}</span>`;
+    if(rowDayMode==='half_day')bdg+=` <span class="badge by" style="font-size:10px">${t('st_half')}</span>`;
+    else if(r.start_time)bdg+=` <span class="badge bg" style="font-size:10px">${t('st_full')}</span>`;
+    if(r.auto_ended)bdg+=` <span class="badge bauto" style="font-size:10px">⚙️ auto</span>`;
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${i+1}</td><td style="font-family:var(--mono)">${r.work_date}</td><td style="font-family:var(--mono)">${r.start_time?r.start_time.substring(0,5):'-'}</td><td>${r.lunch_start?r.lunch_start.substring(0,5):'-'}</td><td>${r.lunch_end?r.lunch_end.substring(0,5):'-'}</td><td>${r.end_time?r.end_time.substring(0,5):'-'}</td><td>${r.late_minutes?r.late_minutes+' '+t('daq'):'-'}</td><td style="font-family:var(--mono)">${wh}h ${wm}m</td><td>${lh}h ${lm2}m</td><td style="color:${afkOver>0?'var(--danger)':'inherit'};font-family:var(--mono)">${afkMin>0?afkMin+' '+t('daq'):'—'}${afkOver>0?` <span style="font-size:10px;color:var(--danger)">(+${afkOver} ${t('daq')} ${t('afk_over')})</span>`:''}</td><td>${bdg}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  let wd=0;
+  for(let d=1; d<=dim; d++){
+    const ds=`${y}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    if(isWorkDay(ds))wd++;
+  }
+  const abs = Math.max(0, wd-came);
+  const afkOverTotalMin = Math.max(0, Math.floor(totalAfkSec/60)-30);
+  const penalty = lc*10 + abs*20 + Math.min(afkOverTotalMin,20);
+  const finalBall = Math.min(100, Math.max(0, 100-penalty+bonus));
+  const kpiSum = calcKpi(finalBall, CU.kpi_type || 'senior');
+
+  st('e_lc',''+lc);
+  st('e_afk_total',Math.floor(totalAfkSec/60)+' '+t('daqiqa'));
+  st('e_kpi_ball', finalBall+' '+t('ball'));
+  st('e_kpi_sum', kpiSum.toLocaleString()+' UZS');
+  st('e_kpi_bonus', (bonus>=0?'+':'')+bonus+' '+t('ball'));
+  st('e_kpi_plan', CU.kpi_type==='junior' ? t('level_jr') : t('level_sr'));
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+(async function(){
+  applyTheme(localStorage.getItem('aloqa_theme')||'dark');
+  userPublicIP=await getUserIP();
+  const myIPEl=document.getElementById('ipb_val');if(myIPEl)myIPEl.textContent=userPublicIP||'—';
+
+  const s=localStorage.getItem('aloqa_u');
+  if(s){try{CU=JSON.parse(s);if(CU&&CU.role==='employee'){const allowed=await checkIPAccess('employee');if(!allowed){showIPBlock(userPublicIP);return;}}}catch(e){CU=null;}}
+
+  showPage(CU?(CU.role==='admin'?'admin':'employee'):'login');
+
+  document.getElementById('inp_p').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  document.getElementById('inp_l').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+
+  // ✅ FIX 3: Tab qaytganda — faceHitCount reset, video qayta yoqiladi
+  document.addEventListener('visibilitychange',()=>{
+    if(!document.hidden && CU && CU.role==='employee' && empState==='working'){
+      if(!faceStream){
+        // Stream yo'q — to'liq qayta boshlash
+        startFaceDetection();
+      } else {
+        // Stream bor — faqat video ni qayta yoqish va counterlarni reset
+        const video=document.getElementById('faceVideo');
+        if(video && video.paused){
+          try{ video.play(); }catch(e){}
+        }
+        // ✅ MUHIM: Tab qaytganda ketma-ket detection yangilansin
+        faceHitCount=0;
+        faceMissCount=0;
+        isDetecting=false;
+        isDetectingStartTime=0;
+      }
+    }
+  });
+})();
+</script>
+</body>
+</html>
